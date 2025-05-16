@@ -76,6 +76,8 @@ def zmap_scan():
 
 
 def parse_zmap_results():
+    curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+    timeStamp = str(curTime.day)+str(curTime.hour)+str(curTime.minute)+str(curTime.second)
     df = pd.read_csv('zmap_ipv4_snmpv3_'+timeStamp+'.csv')
 
     # Add a new column for ASN/description
