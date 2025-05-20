@@ -1,8 +1,10 @@
+from multiprocessing import Pipe
 import subprocess, sys, os
 import threading
 import signal
 import time
 import datetime
+import socket
 
 import pandas as pd
 from ipwhois import IPWhois
@@ -10,14 +12,21 @@ from tqdm import tqdm
 
 ZMAP_END = False
 
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]
+
+
 def tshark_sniff():
-    global lines
     global ZMAP_END
+
+    my_ip = get_ip_address()
 
     cmd = [
         'sudo', 'tshark',
-        '-i', 'eth0',
-        '-Y', 'snmp',
+        #'-i', 'eth0',
+        '-Y', f'snmp && ip.src != {my_ip}',
         '-T', 'fields',
         '-e', 'ip.src',
         '-e', 'snmp.msgAuthoritativeEngineID',
@@ -28,7 +37,8 @@ def tshark_sniff():
         '-e', 'snmp.engineid.time',
         '-e', 'snmp.msgAuthoritativeEngineBoots',
         '-e', 'snmp.msgAuthoritativeEngineTime',
-        '-E', 'separator=,'
+        '-E', 'separator=,',
+        '-E', 'header=y'
     ]
 
     print(str.join(" ", cmd))
@@ -37,7 +47,7 @@ def tshark_sniff():
         process = subprocess.Popen(
             cmd,
             stdout=f,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
             preexec_fn=os.setsid
@@ -63,7 +73,7 @@ def zmap_scan():
     curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
     timeStamp = str(curTime.day)+str(curTime.hour)+str(curTime.minute)+str(curTime.second)
 
-    command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -r 30000 -c 10 -w ./ip_whitelist"
+    command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -c 10 -w ./ip_whitelist --output-filter=\"success=1 && repeat=0\""
     try:
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
