@@ -5,8 +5,10 @@ import signal
 import time
 import datetime
 import socket
+import csv
 
 import pandas as pd
+from requests import head
 from ipwhois import IPWhois
 from tqdm import tqdm
 
@@ -22,22 +24,25 @@ def tshark_sniff():
     global ZMAP_END
 
     my_ip = get_ip_address()
-
+    print(my_ip)
     cmd = [
         'sudo', 'tshark',
         #'-i', 'eth0',
-        '-Y', f'snmp && ip.src != {my_ip}',
+        #'-Y', f'snmp && ip.src != {my_ip}',
+        '-f', f'udp port 161 and not src host {my_ip}',
+        #'-w', 'out.pcap',
+        #'-F', 'pcap'
         '-T', 'fields',
-        '-e', 'ip.src',
+        '-e', 'ip.src_host',
         '-e', 'snmp.msgAuthoritativeEngineID',
-        '-e', 'snmp.engineid.conform',
-        '-e', 'snmp.engineid.enterprise',
-        '-e', 'snmp.engineid.format',
-        '-e', 'snmp.engineid.data',
-        '-e', 'snmp.engineid.time',
+        #'-e', 'snmp.engineid.conform',
+        #'-e', 'snmp.engineid.enterprise',
+        #'-e', 'snmp.engineid.format',
+        #'-e', 'snmp.engineid.data',
+        #'-e', 'snmp.engineid.time',
         '-e', 'snmp.msgAuthoritativeEngineBoots',
         '-e', 'snmp.msgAuthoritativeEngineTime',
-        '-E', 'separator=,',
+        '-E', 'separator=;',
         '-E', 'header=y'
     ]
 
@@ -46,24 +51,75 @@ def tshark_sniff():
         f = open("scan_results.txt", "w")
         process = subprocess.Popen(
             cmd,
-            stdout=f,
+            stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
             preexec_fn=os.setsid
         )
-
+        lines = []
         print("TShark started...")
         while True:
             #print(ZMAP_END)
             if ZMAP_END:
                 print(" Stopping TShark...")
                 os.killpg(os.getpgid(process.pid), signal.SIGINT)
+                lines = process.stdout.readlines()
                 break
         
+        parse_tshark_out(lines, save_to_file=True)
+
         print("TShark capture ended.")
     except Exception as e:
         print(f"Error during TShark sniffing: {e}")
+
+
+def parse_tshark_out(lines, save_to_file=False):
+    # First two lines is tshark logs
+    lines = lines[2:]
+    
+    header = lines[0].split(";")
+    header[-1] = header[-1].strip('\n')
+    lines_with_mac = []
+
+    for line in lines[1:]:
+        split_line = line.split(";")
+        if len(split_line) == 4:
+            ip, id, boots, time = split_line
+            time = time.strip('\n')
+            mac = extract_mac_from_id(id)
+            # TODO: map this mac to a vendor with mac-vendor-lookup
+
+            lines_with_mac.append([ip, id, boots, time, mac])
+        else: print(line)
+    if save_to_file:
+        curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+        timeStamp = str(curTime.day)+str(curTime.hour)+str(curTime.minute)+str(curTime.second)
+
+        with open(f'parsed_output_{timeStamp}.csv', 'w') as f:
+            write = csv.writer(f)
+            write.writerow(header)
+            write.writerows(lines_with_mac)
+
+
+
+def extract_mac_from_id(engine_id: str):
+    if len(engine_id) < 5:
+        return "invalid"
+    if "1f88" in engine_id:
+        return "net-snmp"
+    
+    # From: https://www.cisco.com/c/en/us/td/docs/switches/lan/csb_switching_general/olh/Sx300/1-3-0/en/snmp_engine_id.html#:~:text=The%20default%20SNMP%20Engine%20ID,have%20the%20same%20engine%20ID
+    # First 4 octets—First bit = 1, the rest is the IANA enterprise number. -> 0x8000
+    # Fifth octet—Set to 3 to indicate the MAC address that follows. 
+    # Last 6 octets—MAC address of the device.
+    if engine_id[0] != '8':
+        return "malformed_id"
+
+    if engine_id[4] != '3':
+        return "no_mac_indication"
+    
+    return engine_id[5:]
 
 
 def zmap_scan():
