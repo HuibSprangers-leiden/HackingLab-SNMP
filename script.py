@@ -88,10 +88,8 @@ def parse_tshark_from_file(file_name, save_to_file):
             reader = csv.reader(f, delimiter=';')
             lines = list(reader)[3:] # just skip the first 3 lines as this is how many packets we captured etc
 
-        start = 0
         for i, line in enumerate(lines):
             if "ip.src_host" in line:
-                start = i
                 break
 
         # Remove tshark logs
@@ -121,6 +119,8 @@ def parse_tshark_from_file(file_name, save_to_file):
     except Exception as e:
         print(f"Failed to parse CSV {file_name}: {e}")
         print(traceback.format_exc())
+
+    print(f"Parsed succesfully to: parsed_output_{timeStamp}.csv")
 
 def extract_iana_and_mac_from_id(engine_id_str: str):
     try:
@@ -160,13 +160,14 @@ def zmap_scan(ip_list):
     #command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:snmp3_161.pkt 5.45.67.59"
 
     curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-    timeStamp = str(curTime.day)+str(curTime.hour)+str(curTime.minute)+str(curTime.second)
+    timeStamp = str(curTime.day)+str(curTime.month)+str(curTime.hour)+str(curTime.minute)
 
     command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -c 10 -w ./"+ip_list+" --output-filter=\"success=1 && repeat=0\""
     try:
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         print("ZMap scan completed.")
+        parse_zmap_results()
     except subprocess.CalledProcessError as e:
         print("Error during ZMap scan:")
         print(e.stderr)
@@ -176,7 +177,7 @@ def zmap_scan(ip_list):
 
 def parse_zmap_results():
     curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-    timeStamp = str(curTime.day)+str(curTime.hour)+str(curTime.minute)+str(curTime.second)
+    timeStamp = str(curTime.day)+str(curTime.month)+str(curTime.hour)+str(curTime.minute)
     df = pd.read_csv('zmap_ipv4_snmpv3_'+timeStamp+'.csv')
 
     # Add a new column for ASN/description
