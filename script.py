@@ -150,13 +150,14 @@ def zmap_scan():
     #command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:snmp3_161.pkt 5.45.67.59"
 
     curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-    timeStamp = str(curTime.day)+str(curTime.hour)+str(curTime.minute)+str(curTime.second)
+    timeStamp = str(curTime.day)+str(curTime.month)+str(curTime.hour)+str(curTime.minute)
 
-    command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -c 10 -w ./ip_whitelist --output-filter=\"success=1 && repeat=0\""
+    command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -c 10 -w ./NL_ipv4_snmp1400.txt --output-filter=\"success=1 && repeat=0\""
     try:
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         print("ZMap scan completed.")
+        parse_zmap_results()
     except subprocess.CalledProcessError as e:
         print("Error during ZMap scan:")
         print(e.stderr)
@@ -166,7 +167,7 @@ def zmap_scan():
 
 def parse_zmap_results():
     curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-    timeStamp = str(curTime.day)+str(curTime.hour)+str(curTime.minute)+str(curTime.second)
+    timeStamp = str(curTime.day)+str(curTime.month)+str(curTime.hour)+str(curTime.minute)
     df = pd.read_csv('zmap_ipv4_snmpv3_'+timeStamp+'.csv')
 
     # Add a new column for ASN/description
