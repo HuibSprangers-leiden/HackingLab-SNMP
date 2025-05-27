@@ -65,7 +65,7 @@ def tshark_sniff():
                 os.killpg(os.getpgid(process.pid), signal.SIGINT)
                 lines = process.stdout.readlines()
                 break
-        
+
         parse_tshark_out(lines, save_to_file=True)
 
         print("TShark capture ended.")
@@ -112,9 +112,11 @@ def parse_tshark_out(lines, save_to_file=False):
             write.writerow(header)
             write.writerows(lines_with_mac)
 
-
 def extract_iana_and_mac_from_id(engine_id_str: str):
-    engine_id = bytes.fromhex(engine_id_str)
+    try:
+        engine_id = bytes.fromhex(engine_id_str)
+    except Exception as e:
+        return ("invalid", "invalid")
     if len(engine_id) <= 5:
         return ("invalid", "invalid")
     
@@ -129,7 +131,7 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
         # Set the first bit of the first byte to zero (to extract the IANA number)
         enterprise_bytes = bytes([enterprise_bytes[0] & 0x7F]) + enterprise_bytes[1:]
         enterprise_code = str(int.from_bytes(enterprise_bytes, byteorder='big'))
-        # IANA enterprise code maps directly to vendor: https://standards-oui.ieee.org/
+        # IANA enterprise code maps directly to vendor: https://www.iana.org/assignments/enterprise-numbers.txt
         
         # Check for mac indication on 5th octet
         if engine_id[4] == 0x03:
