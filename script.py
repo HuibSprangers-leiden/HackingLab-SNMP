@@ -5,8 +5,11 @@ import signal
 import time
 import datetime
 import socket
+import csv
+import traceback
 
 import pandas as pd
+from requests import head
 from ipwhois import IPWhois
 from tqdm import tqdm
 
@@ -22,49 +25,123 @@ def tshark_sniff():
     global ZMAP_END
 
     my_ip = get_ip_address()
-
     cmd = [
         'sudo', 'tshark',
         #'-i', 'eth0',
-        '-Y', f'snmp && ip.src != {my_ip}',
+        #'-Y', f'snmp && ip.src != {my_ip}',
+        '-f', f'udp port 161 and not src host {my_ip}',
+        #'-w', 'out.pcap',
+        #'-F', 'pcap'
         '-T', 'fields',
-        '-e', 'ip.src',
+        '-e', 'ip.src_host',
         '-e', 'snmp.msgAuthoritativeEngineID',
-        '-e', 'snmp.engineid.conform',
-        '-e', 'snmp.engineid.enterprise',
-        '-e', 'snmp.engineid.format',
-        '-e', 'snmp.engineid.data',
-        '-e', 'snmp.engineid.time',
+        #'-e', 'snmp.engineid.conform',
+        #'-e', 'snmp.engineid.enterprise',
+        #'-e', 'snmp.engineid.format',
+        #'-e', 'snmp.engineid.data',
+        #'-e', 'snmp.engineid.time',
         '-e', 'snmp.msgAuthoritativeEngineBoots',
         '-e', 'snmp.msgAuthoritativeEngineTime',
-        '-E', 'separator=,',
+        '-E', 'separator=;',
         '-E', 'header=y'
     ]
 
-    print(str.join(" ", cmd))
+    #print(str.join(" ", cmd))
     try:
-        f = open("scan_results.txt", "w")
         process = subprocess.Popen(
             cmd,
-            stdout=f,
+            stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
             preexec_fn=os.setsid
         )
-
+        lines = []
         print("TShark started...")
         while True:
             #print(ZMAP_END)
             if ZMAP_END:
                 print(" Stopping TShark...")
                 os.killpg(os.getpgid(process.pid), signal.SIGINT)
+                lines = process.stdout.readlines()
                 break
         
+        parse_tshark_out(lines, save_to_file=True)
+
         print("TShark capture ended.")
     except Exception as e:
         print(f"Error during TShark sniffing: {e}")
+        print(traceback.format_exc())
 
+
+def parse_tshark_out(lines, save_to_file=False):
+
+    start = 0
+    for i, line in enumerate(lines):
+        if "ip.src_host" in line:
+            start = i
+            break
+
+    # Remove tshark logs
+    lines = lines[start:]
+
+    header = lines[0].split(";")
+    header[-1] = header[-1].strip('\n')
+
+    header.append("Enterprise code")
+    header.append("Mac")
+    lines_with_mac = []
+
+    for line in lines[1:]:
+        split_line = line.split(";")
+        if len(split_line) == 4:
+            ip, id, boots, time = split_line
+            time = time.strip('\n')
+            iana, mac = extract_iana_and_mac_from_id(id)
+            # TODO: map the IANA to a vendor
+            # TODO: map this mac to a vendor with mac-vendor-lookup
+
+            lines_with_mac.append([ip, id, boots, time, iana, mac])
+        else: print(line)
+    if save_to_file:
+        curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+        timeStamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
+
+        with open(f'parsed_output_{timeStamp}.csv', 'w') as f:
+            write = csv.writer(f)
+            write.writerow(header)
+            write.writerows(lines_with_mac)
+
+
+def extract_iana_and_mac_from_id(engine_id_str: str):
+    engine_id = bytes.fromhex(engine_id_str)
+    if len(engine_id) <= 5:
+        return ("invalid", "invalid")
+    
+    enterprise_code = "not_set"
+    mac = "not_set"
+
+    # Engine ID parsing method is based on: https://www.rfc-editor.org/rfc/pdfrfc/rfc3411.txt.pdf page 42
+
+    # If first bit -> 1 means SNMPv3 format, else older format is used
+    if engine_id[0] & 0x80 == 0x80: 
+        enterprise_bytes = engine_id[:4] 
+        # Set the first bit of the first byte to zero (to extract the IANA number)
+        enterprise_bytes = bytes([enterprise_bytes[0] & 0x7F]) + enterprise_bytes[1:]
+        enterprise_code = str(int.from_bytes(enterprise_bytes, byteorder='big'))
+        # IANA enterprise code maps directly to vendor: https://standards-oui.ieee.org/
+        
+        # Check for mac indication on 5th octet
+        if engine_id[4] == 0x03:
+            mac = engine_id[5:].hex() # TODO: This might contain padding, find a way to remove it
+        else:
+            mac = "No Mac indication (0x03)"
+    else:
+        enterprise_bytes = engine_id[:4]
+        enterprise_code = str(int.from_bytes(enterprise_bytes, byteorder='big'))
+
+    return (enterprise_code, mac)
+    
 
 def zmap_scan():
     global ZMAP_END
