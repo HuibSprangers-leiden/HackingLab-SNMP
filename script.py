@@ -162,7 +162,7 @@ def zmap_scan(ip_list):
     curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
     timeStamp = str(curTime.day)+str(curTime.month)+str(curTime.hour)+str(curTime.minute)
 
-    command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -c 10 -w ./"+ip_list+" --output-filter=\"success=1 && repeat=0\""
+    command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -c 10 -w "+ip_list+" --output-filter=\"success=1 && repeat=0\""
     try:
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -227,7 +227,7 @@ def main():
     # check if valid command line input
     if len(sys.argv) != 3:
         print("Wrong number of args, usage:\n"
-              "  python3 script.py scan <ip_list>\n"
+              "  python3 script.py scan <path_to_ip_list>\n"
               "  python3 script.py parse <file_name>\n")
         sys.exit(1)
 
@@ -235,7 +235,7 @@ def main():
 
     if mode == "scan":
         if len(sys.argv) != 3:
-            print("Usage: python3 script.py scan <ip_list>")
+            print("Usage: python3 script.py scan <path_to_ip_list>")
             sys.exit(1)
         ip_list = sys.argv[2]
 
