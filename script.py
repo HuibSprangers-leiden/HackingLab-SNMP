@@ -7,7 +7,6 @@ import datetime
 import socket
 import csv
 import traceback
-
 import pandas as pd
 from requests import head
 from ipwhois import IPWhois
@@ -66,51 +65,62 @@ def tshark_sniff():
                 lines = process.stdout.readlines()
                 break
 
-        parse_tshark_out(lines, save_to_file=True)
+        curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+        timeStamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
 
-        print("TShark capture ended.")
+        # save to csv, so we can parse afterwards in case of unexpected errors
+        with open(f"tshark_output_{timeStamp}.csv", "w", newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=';')
+            for line in lines:
+                row = line.strip().split(';')
+                writer.writerow(row)
+
+        print("TShark capture ended. Saved to "  + f"tshark_output_{timeStamp}.csv. This can now be parsed.")
+
     except Exception as e:
         print(f"Error during TShark sniffing: {e}")
         print(traceback.format_exc())
 
 
-def parse_tshark_out(lines, save_to_file=False):
+def parse_tshark_from_file(file_name, save_to_file):
+    try:
+        with open(file_name, "r") as f:
+            reader = csv.reader(f, delimiter=';')
+            lines = list(reader)[3:] # just skip the first 3 lines as this is how many packets we captured etc
 
-    start = 0
-    for i, line in enumerate(lines):
-        if "ip.src_host" in line:
-            start = i
-            break
+        start = 0
+        for i, line in enumerate(lines):
+            if "ip.src_host" in line:
+                start = i
+                break
 
-    # Remove tshark logs
-    lines = lines[start:]
+        # Remove tshark logs
+        header = lines[0]
+        header.append("Enterprise code")
+        header.append("Mac")
 
-    header = lines[0].split(";")
-    header[-1] = header[-1].strip('\n')
+        lines_with_mac = []
 
-    header.append("Enterprise code")
-    header.append("Mac")
-    lines_with_mac = []
+        for row in lines[1:]:
+            if len(row) == 4:
+                ip, id, boots, time = row
+                iana, mac = extract_iana_and_mac_from_id(id)
+                lines_with_mac.append([ip, id, boots, time, iana, mac])
+            else:
+                print("Invalid row:", row)
 
-    for line in lines[1:]:
-        split_line = line.split(";")
-        if len(split_line) == 4:
-            ip, id, boots, time = split_line
-            time = time.strip('\n')
-            iana, mac = extract_iana_and_mac_from_id(id)
-            # TODO: map the IANA to a vendor
-            # TODO: map this mac to a vendor with mac-vendor-lookup
+        if save_to_file:
+            curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+            timeStamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
 
-            lines_with_mac.append([ip, id, boots, time, iana, mac])
-        else: print(line)
-    if save_to_file:
-        curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-        timeStamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
+            with open(f'parsed_output_{timeStamp}.csv', 'w') as f:
+                write = csv.writer(f)
+                write.writerow(header)
+                write.writerows(lines_with_mac)
 
-        with open(f'parsed_output_{timeStamp}.csv', 'w') as f:
-            write = csv.writer(f)
-            write.writerow(header)
-            write.writerows(lines_with_mac)
+    except Exception as e:
+        print(f"Failed to parse CSV {file_name}: {e}")
+        print(traceback.format_exc())
 
 def extract_iana_and_mac_from_id(engine_id_str: str):
     try:
@@ -145,14 +155,14 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
     return (enterprise_code, mac)
     
 
-def zmap_scan():
+def zmap_scan(ip_list):
     global ZMAP_END
     #command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:snmp3_161.pkt 5.45.67.59"
 
     curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
     timeStamp = str(curTime.day)+str(curTime.hour)+str(curTime.minute)+str(curTime.second)
 
-    command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -c 10 -w ./ip_whitelist --output-filter=\"success=1 && repeat=0\""
+    command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -c 10 -w ./"+ip_list+" --output-filter=\"success=1 && repeat=0\""
     try:
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -212,13 +222,35 @@ def parse_zmap_results():
     # Save enriched file
     df.to_csv('zmap_enriched_snmp_ips_'+timeStamp+'.csv', index=False)
 
+def main():
+    # check if valid command line input
+    if len(sys.argv) != 3:
+        print("Wrong number of args, usage:\n"
+              "  python3 script.py scan <ip_list>\n"
+              "  python3 script.py parse <file_name>\n")
+        sys.exit(1)
 
-sniff_thread = threading.Thread(target=tshark_sniff)
-zmap_thread = threading.Thread(target=zmap_scan)
+    mode = sys.argv[1]
 
-sniff_thread.start()
-time.sleep(1) # Wati for tshark to start capturing
-zmap_thread.start()
+    if mode == "scan":
+        if len(sys.argv) != 3:
+            print("Usage: python3 script.py scan <ip_list>")
+            sys.exit(1)
+        ip_list = sys.argv[2]
 
-zmap_thread.join()
-sniff_thread.join()
+        sniff_thread = threading.Thread(target=tshark_sniff)
+        zmap_thread = threading.Thread(target=zmap_scan, args=(ip_list,))
+
+        sniff_thread.start()
+        time.sleep(1) # Wait for tshark to start capturing
+        zmap_thread.start()
+
+        zmap_thread.join()
+        sniff_thread.join()
+
+    elif mode == "parse":
+        file_name = sys.argv[2]
+        parse_tshark_from_file(file_name, True)
+
+if __name__ == "__main__":
+    main()
