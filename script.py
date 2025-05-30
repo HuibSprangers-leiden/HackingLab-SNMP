@@ -8,9 +8,9 @@ import socket
 import csv
 import traceback
 import pandas as pd
-from requests import head
 from ipwhois import IPWhois
 from tqdm import tqdm
+import re
 
 ZMAP_END = False
 
@@ -108,10 +108,15 @@ def parse_tshark_from_file(file_name, save_to_file):
                 print("Invalid row:", row)
 
         if save_to_file:
-            curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-            timeStamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
+            # Check if file has timestamp and reuse it for consistency
+            timestamp_match = re.search(r'(\d{2}_\d{2}_\d{2}_\d{2}_\d{2})', file_name)
+            if timestamp_match:
+                timestamp = timestamp_match.group(1)
+            else:
+                cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+                timestamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",cur_time.month, cur_time.day, cur_time.hour, cur_time.minute, cur_time.second)
 
-            with open(f'parsed_output_{timeStamp}.csv', 'w') as f:
+            with open(f'parsed_output_{timestamp}.csv', 'w') as f:
                 write = csv.writer(f)
                 write.writerow(header)
                 write.writerows(lines_with_mac)
@@ -120,7 +125,7 @@ def parse_tshark_from_file(file_name, save_to_file):
         print(f"Failed to parse CSV {file_name}: {e}")
         print(traceback.format_exc())
 
-    print(f"Parsed succesfully to: parsed_output_{timeStamp}.csv")
+    print(f"Parsed succesfully to: parsed_output_{timestamp}.csv")
 
 def extract_iana_and_mac_from_id(engine_id_str: str):
     try:
@@ -159,15 +164,16 @@ def zmap_scan(ip_list):
     global ZMAP_END
     #command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:snmp3_161.pkt 5.45.67.59"
 
-    curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-    timeStamp = str(curTime.day)+str(curTime.month)+str(curTime.hour)+str(curTime.minute)
+    cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+    timestamp = str(cur_time.day)+str(cur_time.month)+str(cur_time.hour)+str(cur_time.minute)
+    output_filename = f"zmap_ipv4_snmpv3_{timestamp}.csv" 
 
-    command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o zmap_ipv4_snmpv3_"+timeStamp+".csv -c 10 -w "+ip_list+" --output-filter=\"success=1 && repeat=0\""
+    command = f"sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o {output_filename} -c 10 -w {ip_list} --output-filter=\"success=1 && repeat=0\""
     try:
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         print("ZMap scan completed.")
-        parse_zmap_results()
+        parse_zmap_results(timestamp)
     except subprocess.CalledProcessError as e:
         print("Error during ZMap scan:")
         print(e.stderr)
@@ -175,10 +181,8 @@ def zmap_scan(ip_list):
         ZMAP_END = True
 
 
-def parse_zmap_results():
-    curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-    timeStamp = str(curTime.day)+str(curTime.month)+str(curTime.hour)+str(curTime.minute)
-    df = pd.read_csv('zmap_ipv4_snmpv3_'+timeStamp+'.csv')
+def parse_zmap_results(timestamp):
+    df = pd.read_csv(f'zmap_ipv4_snmpv3_{timestamp}.csv')
 
     # Add a new column for ASN/description
     asn_numbers = []
@@ -221,7 +225,7 @@ def parse_zmap_results():
     df['net_type'] = net_type
 
     # Save enriched file
-    df.to_csv('zmap_enriched_snmp_ips_'+timeStamp+'.csv', index=False)
+    df.to_csv('zmap_enriched_snmp_ips_'+timestamp+'.csv', index=False)
 
 def main():
     # check if valid command line input
