@@ -13,6 +13,9 @@ from tqdm import tqdm
 import re
 
 ZMAP_END = False
+ZMAP_FOLDER = './zmap_outputs/'
+TSHARK_FOLDER = './tshark_outputs/'
+PARSED_OUTPUTS_FOLDER = './parsed_outputs/'
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -69,7 +72,7 @@ def tshark_sniff():
         timeStamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
 
         # save to csv, so we can parse afterwards in case of unexpected errors
-        with open(f"tshark_output_{timeStamp}.csv", "w", newline='') as csvfile:
+        with open(f"{TSHARK_FOLDER}tshark_output_{timeStamp}.csv", "w", newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=';')
             for line in lines:
                 row = line.strip().split(';')
@@ -116,7 +119,7 @@ def parse_tshark_from_file(file_name, save_to_file):
                 cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
                 timestamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",cur_time.month, cur_time.day, cur_time.hour, cur_time.minute, cur_time.second)
 
-            with open(f'parsed_output_{timestamp}.csv', 'w') as f:
+            with open(f'{PARSED_OUTPUTS_FOLDER}parsed_output_{timestamp}.csv', 'w') as f:
                 write = csv.writer(f)
                 write.writerow(header)
                 write.writerows(lines_with_mac)
@@ -168,7 +171,7 @@ def zmap_scan(ip_list):
     timestamp = str(cur_time.day)+str(cur_time.month)+str(cur_time.hour)+str(cur_time.minute)
     output_filename = f"zmap_ipv4_snmpv3_{timestamp}.csv" 
 
-    command = f"sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o {output_filename} -c 10 -w {ip_list} --output-filter=\"success=1 && repeat=0\""
+    command = f"sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o {ZMAP_FOLDER}{output_filename} -c 10 -w {ip_list} --output-filter=\"success=1 && repeat=0\""
     try:
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -182,7 +185,7 @@ def zmap_scan(ip_list):
 
 
 def parse_zmap_results(timestamp):
-    df = pd.read_csv(f'zmap_ipv4_snmpv3_{timestamp}.csv')
+    df = pd.read_csv(f'{ZMAP_FOLDER}zmap_ipv4_snmpv3_{timestamp}.csv')
 
     # Add a new column for ASN/description
     asn_numbers = []
@@ -225,7 +228,7 @@ def parse_zmap_results(timestamp):
     df['net_type'] = net_type
 
     # Save enriched file
-    df.to_csv('zmap_enriched_snmp_ips_'+timestamp+'.csv', index=False)
+    df.to_csv(f'{ZMAP_FOLDER}zmap_enriched_snmp_ips_{timestamp}.csv', index=False)
 
 def main():
     # check if valid command line input
