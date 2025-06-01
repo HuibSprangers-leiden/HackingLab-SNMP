@@ -8,6 +8,7 @@ import socket
 import csv
 import traceback
 import pandas as pd
+import numpy as np
 from ipwhois import IPWhois
 from tqdm import tqdm
 import re
@@ -29,26 +30,16 @@ def tshark_sniff():
     my_ip = get_ip_address()
     cmd = [
         'sudo', 'tshark',
-        #'-i', 'eth0',
-        #'-Y', f'snmp && ip.src != {my_ip}',
         '-f', f'udp port 161 and not src host {my_ip}',
-        #'-w', 'out.pcap',
-        #'-F', 'pcap'
         '-T', 'fields',
         '-e', 'ip.src_host',
         '-e', 'snmp.msgAuthoritativeEngineID',
-        #'-e', 'snmp.engineid.conform',
-        #'-e', 'snmp.engineid.enterprise',
-        #'-e', 'snmp.engineid.format',
-        #'-e', 'snmp.engineid.data',
-        #'-e', 'snmp.engineid.time',
         '-e', 'snmp.msgAuthoritativeEngineBoots',
         '-e', 'snmp.msgAuthoritativeEngineTime',
         '-E', 'separator=;',
         '-E', 'header=y'
     ]
 
-    #print(str.join(" ", cmd))
     try:
         process = subprocess.Popen(
             cmd,
@@ -61,7 +52,6 @@ def tshark_sniff():
         lines = []
         print("TShark started...")
         while True:
-            #print(ZMAP_END)
             if ZMAP_END:
                 print(" Stopping TShark...")
                 os.killpg(os.getpgid(process.pid), signal.SIGINT)
@@ -84,6 +74,34 @@ def tshark_sniff():
         print(f"Error during TShark sniffing: {e}")
         print(traceback.format_exc())
 
+def get_enterprise_codes_df():
+    # This file contains mappings from enterprise codes to vendor names
+    iana_file = "enterprise-numbers.txt"
+    with open(iana_file, 'r', encoding='utf-8') as file:
+        lines = [line.rstrip('\n') for line in file if line.strip()]
+
+    iana_data = []
+    i = 0
+    while i < len(lines):
+        if lines[i].isdigit():
+            try:
+                code = lines[i].strip()
+                vendor = lines[i+1].strip()
+                iana_data.append({
+                    'Enterprise code': code,
+                    'Vendor': vendor
+                })
+                i += 4  # Skip ahead to the next entry
+            except IndexError:
+                break
+        else:
+            i += 1
+
+    df_iana = pd.DataFrame(iana_data)
+    df_iana = df_iana[df_iana['Enterprise code'].apply(lambda x: x.isnumeric())]
+    df_iana['Enterprise code'] = df_iana['Enterprise code'].astype(np.int64)
+
+    return df_iana
 
 def parse_tshark_from_file(file_name, save_to_file):
     try:
@@ -101,7 +119,8 @@ def parse_tshark_from_file(file_name, save_to_file):
         header.append("Mac")
 
         lines_with_mac = []
-
+        
+        # Add iana enterprise code and mac
         for row in lines[1:]:
             if len(row) == 4:
                 ip, id, boots, time = row
@@ -109,6 +128,12 @@ def parse_tshark_from_file(file_name, save_to_file):
                 lines_with_mac.append([ip, id, boots, time, iana, mac])
             else:
                 print("Invalid row:", row)
+
+        # Map enterprise code to vendor 
+        df_iana = get_enterprise_codes_df()
+        df_data = pd.DataFrame(lines_with_mac, columns=header)
+        df_data['Enterprise code'] = pd.to_numeric(df_data['Enterprise code'], errors='coerce')
+        df_merged = pd.merge(df_data, df_iana, on='Enterprise code', how='left')
 
         if save_to_file:
             # Check if file has timestamp and reuse it for consistency
@@ -119,17 +144,17 @@ def parse_tshark_from_file(file_name, save_to_file):
                 cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
                 timestamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",cur_time.month, cur_time.day, cur_time.hour, cur_time.minute, cur_time.second)
 
-            with open(f'{PARSED_OUTPUTS_FOLDER}parsed_output_{timestamp}.csv', 'w') as f:
-                write = csv.writer(f)
-                write.writerow(header)
-                write.writerows(lines_with_mac)
+            # Save file
+            df_merged.columns = ['IP','EngineID','Engine Boots', 'Engine Time', 'Enterprise Code', 'MAC', 'Vendor']
+            output_file = f'{PARSED_OUTPUTS_FOLDER}parsed_output_{timestamp}.csv'
+            df_merged.to_csv(output_file, index=False)
+            print(f"Parsed succesfully to: {PARSED_OUTPUTS_FOLDER}parsed_output_{timestamp}.csv")
 
     except Exception as e:
         print(f"Failed to parse CSV {file_name}: {e}")
         print(traceback.format_exc())
 
-    print(f"Parsed succesfully to: parsed_output_{timestamp}.csv")
-
+    
 def extract_iana_and_mac_from_id(engine_id_str: str):
     try:
         engine_id = bytes.fromhex(engine_id_str)
@@ -149,7 +174,6 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
         # Set the first bit of the first byte to zero (to extract the IANA number)
         enterprise_bytes = bytes([enterprise_bytes[0] & 0x7F]) + enterprise_bytes[1:]
         enterprise_code = str(int.from_bytes(enterprise_bytes, byteorder='big'))
-        # IANA enterprise code maps directly to vendor: https://www.iana.org/assignments/enterprise-numbers.txt
         
         # Check for mac indication on 5th octet
         if engine_id[4] == 0x03:
@@ -165,7 +189,6 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
 
 def zmap_scan(ip_list):
     global ZMAP_END
-    #command = "sudo zmap -M udp -p 161 -B 10M --probe-args=file:snmp3_161.pkt 5.45.67.59"
 
     cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
     timestamp = str(cur_time.day)+str(cur_time.month)+str(cur_time.hour)+str(cur_time.minute)
@@ -258,6 +281,7 @@ def main():
 
     elif mode == "parse":
         file_name = sys.argv[2]
+
         parse_tshark_from_file(file_name, True)
 
 if __name__ == "__main__":
