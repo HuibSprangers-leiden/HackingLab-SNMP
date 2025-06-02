@@ -202,7 +202,6 @@ def zmap_scan(ip_list):
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         print("ZMap scan completed.")
-        parse_zmap_results(timestamp)
     except subprocess.CalledProcessError as e:
         print("Error during ZMap scan:")
         print(e.stderr)
@@ -286,6 +285,11 @@ def main():
         file_name = sys.argv[2]
 
         parse_tshark_from_file(file_name, True)
+
+    elif mode == "zmap_parse":
+        timestamp = sys.argv[2]
+
+        parse_zmap_results(timestamp)
 
 if __name__ == "__main__":
     main()
