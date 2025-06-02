@@ -62,7 +62,7 @@ def tshark_sniff():
         timeStamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
 
         # save to csv, so we can parse afterwards in case of unexpected errors
-        with open(f"{TSHARK_FOLDER}tshark_output_{timeStamp}.csv", "w", newline='') as csvfile:
+        with open(f"{TSHARK_FOLDER}tshark_output_{timeStamp}.csv", "w") as csvfile:
             writer = csv.writer(csvfile, delimiter=';')
             for line in lines:
                 row = line.strip().split(';')
@@ -107,11 +107,14 @@ def parse_tshark_from_file(file_name, save_to_file):
     try:
         with open(file_name, "r") as f:
             reader = csv.reader(f, delimiter=';')
-            lines = list(reader)[3:] # just skip the first 3 lines as this is how many packets we captured etc
-
-        for i, line in enumerate(lines):
-            if "ip.src_host" in line:
-                break
+            lines = list(reader)
+            start = 0
+            for i, line in enumerate(lines):
+                if "ip.src_host" in line:
+                    start = i
+                    break
+        
+        lines = lines[start:] # just skip the first lines as this is how many packets we captured etc
 
         # Remove tshark logs
         header = lines[0]
