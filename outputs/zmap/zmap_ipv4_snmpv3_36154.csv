@@ -1,0 +1,1 @@
+saddr,saddr_raw,daddr,daddr_raw,ipid,ttl,classification,success,sport,dport,udp_pkt_size,data,icmp_responder,icmp_type,icmp_code,icmp_unreach_str,repeat,cooldown,timestamp_str,timestamp_ts,timestamp_us

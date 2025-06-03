@@ -1,0 +1,8 @@
+"Running as user ""root"" and group ""root"". This could be dangerous."
+Capturing on 'wlp0s20f3'
+4 packets captured
+ip.src_host;snmp.msgAuthoritativeEngineID;snmp.msgAuthoritativeEngineBoots;snmp.msgAuthoritativeEngineTime
+77.60.209.35;800000090300c4f7d5293400;20;30266246
+77.242.126.110;800000090300001b5484fa7a;2;17257652
+64.26.36.58;0000000903005c3e06c2ab20;3;34486789
+64.26.36.161;0000000903005c3e06c2ab20;3;34486790

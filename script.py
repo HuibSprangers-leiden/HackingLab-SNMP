@@ -14,9 +14,10 @@ from tqdm import tqdm
 import re
 
 ZMAP_END = False
-ZMAP_FOLDER = './zmap_outputs/'
-TSHARK_FOLDER = './tshark_outputs/'
-PARSED_OUTPUTS_FOLDER = './parsed_outputs/'
+ZMAP_FOLDER = './outputs/zmap/'
+TSHARK_FOLDER = './outputs/tshark/'
+PARSED_OUTPUTS_FOLDER = './outputs/parsed/'
+RESULTS_OUTPUT_FOLDER = './outputs/results/'
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -76,7 +77,7 @@ def tshark_sniff():
 
 def get_enterprise_codes_df():
     # This file contains mappings from enterprise codes to vendor names
-    iana_file = "enterprise-numbers.txt"
+    iana_file = "config/enterprise-numbers.txt"
     with open(iana_file, 'r', encoding='utf-8') as file:
         lines = [line.rstrip('\n') for line in file if line.strip()]
 
@@ -197,7 +198,7 @@ def zmap_scan(ip_list):
     timestamp = str(cur_time.day)+str(cur_time.month)+str(cur_time.hour)+str(cur_time.minute)
     output_filename = f"zmap_ipv4_snmpv3_{timestamp}.csv" 
 
-    command = f"sudo zmap -M udp -p 161 -B 10M --probe-args=file:./snmp3_161.pkt -O csv -f \"*\" -o {ZMAP_FOLDER}{output_filename} -c 10 -w {ip_list} --output-filter=\"success=1 && repeat=0\""
+    command = f"sudo zmap -M udp -p 161 -B 10M --probe-args=file:./config/snmp3_161.pkt -O csv -f \"*\" -o {ZMAP_FOLDER}{output_filename} -c 10 -w {ip_list} --output-filter=\"success=1 && repeat=0\""
     try:
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -256,9 +257,9 @@ def parse_zmap_results(timestamp):
 
 def enterprise_count(folder_name, reboot_threshold):
     # This file contains mappings from enterprise codes to vendor names
-    iana_file = "enterprise-numbers.txt"
+    iana_file = "config/enterprise-numbers.txt"
     # file that contains vendors that we exclude, i.e. due to not being middleware
-    excluded_vendors = "excluded_vendors.txt"
+    excluded_vendors = "config/excluded_vendors.txt"
 
     with open(iana_file, 'r', encoding='utf-8') as file:
         lines = [line.rstrip('\n') for line in file if line.strip()]
@@ -289,9 +290,8 @@ def enterprise_count(folder_name, reboot_threshold):
     # Create an empty DataFrame to store the combined data
     df_combined = pd.DataFrame(columns=['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor'])
 
-    results_dir = "results"
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir)
+    if not os.path.exists(RESULTS_OUTPUT_FOLDER):
+        os.makedirs(RESULTS_OUTPUT_FOLDER)
 
     # loop over all the csv files 
     for filename in os.listdir(folder_name):
@@ -318,10 +318,10 @@ def enterprise_count(folder_name, reboot_threshold):
             print(f"Processed {filename}")
 
     # output the files to the 'results' folder
-    combined_output_file = os.path.join(results_dir, "combined_enterprise_output.csv")
-    combined_output_file_timed = os.path.join(results_dir, "combined_enterprise_output_timed.csv")
-    vendor_count_file = os.path.join(results_dir, "vendor_counts_combined.csv")
-    vendor_count_file_timed = os.path.join(results_dir, "vendor_counts_combined_timed.csv")
+    combined_output_file = os.path.join(RESULTS_OUTPUT_FOLDER, "combined_enterprise_output.csv")
+    combined_output_file_timed = os.path.join(RESULTS_OUTPUT_FOLDER, "combined_enterprise_output_timed.csv")
+    vendor_count_file = os.path.join(RESULTS_OUTPUT_FOLDER, "vendor_counts_combined.csv")
+    vendor_count_file_timed = os.path.join(RESULTS_OUTPUT_FOLDER, "vendor_counts_combined_timed.csv")
 
     # combine csv, filter out duplicates
     size_before = df_combined.shape[0]
