@@ -287,7 +287,7 @@ def enterprise_count(folder_name):
     df_iana['Enterprise Code'] = df_iana['Enterprise Code'].astype(str)
 
     # Create an empty DataFrame to store the combined data
-    df_combined = pd.DataFrame(columns=['IP', 'Enterprise Code', 'MAC', 'Vendor'])
+    df_combined = pd.DataFrame(columns=['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor'])
 
     results_dir = "results"
     if not os.path.exists(results_dir):
@@ -315,8 +315,8 @@ def enterprise_count(folder_name):
             else:
                 vendor_column = 'Vendor_y'
 
-            df_output = df_merged[['IP', 'Enterprise Code', 'MAC', vendor_column]]
-            df_output.columns = ['IP', 'Enterprise Code', 'MAC', 'Vendor']
+            df_output = df_merged[['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', vendor_column]]
+            df_output.columns = ['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor']
             
             df_combined = pd.concat([df_combined, df_output], ignore_index=True)
 
@@ -328,7 +328,7 @@ def enterprise_count(folder_name):
 
     # combine csv, filter out duplicates
     size_before = df_combined.shape[0]
-    df_combined.drop_duplicates(inplace=True)
+    df_combined.drop_duplicates(subset=['IP'], inplace=True)
     print("\nDropped " + str(size_before - df_combined.shape[0]) + " duplicates")
 
     # filter out excluded vendors
