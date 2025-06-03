@@ -310,6 +310,9 @@ def enterprise_count(folder_name, reboot_threshold):
             # merge the data
             df_merged = pd.merge(df_input, df_iana, on='Enterprise Code', how='left')
 
+            # if no vendor, we categorise as 'unknown'
+            df_merged['Vendor_x'] = df_merged['Vendor_x'].fillna('unknown')
+
             df_output = df_merged[['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor_x']]
             df_output.columns = ['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor']
             
@@ -326,12 +329,12 @@ def enterprise_count(folder_name, reboot_threshold):
     # combine csv, filter out duplicates
     size_before = df_combined.shape[0]
     df_combined.drop_duplicates(subset=['IP'], inplace=True)
-    print("\nDropped " + str(size_before - df_combined.shape[0]) + " duplicates")
+    print("\nDropped " + str(size_before - df_combined.shape[0]) + " duplicates.")
 
     # filter out excluded vendors
     size_before = df_combined.shape[0]
     df_combined = df_combined[~df_combined["Vendor"].isin(excluded_vendors)]
-    print("Dropped " + str(size_before - df_combined.shape[0]) + " excluded vendors")
+    print("Dropped " + str(size_before - df_combined.shape[0]) + " by vendor exclusion.\n" + str(df_combined.shape[0]) + " entries left.")
 
     df_combined.to_csv(combined_output_file, index=False)
     print(f"Combined output written to:          {combined_output_file}")
@@ -346,14 +349,14 @@ def enterprise_count(folder_name, reboot_threshold):
     size_before = df_combined.shape[0]
     df_combined['Engine Time'] = pd.to_numeric(df_combined['Engine Time'])
     df_combined = df_combined[df_combined['Engine Time'] >= reboot_threshold]
-    print("\nDropped " + str(size_before - df_combined.shape[0]) + " entries based on engine time of " + str(size_before) + " total.")
+    print("\nDropped " + str(size_before - df_combined.shape[0]) + " entries based on engine time of " + str(size_before) + " total. \n" + str(df_combined.shape[0]) + " entries left.")
     df_combined.to_csv(combined_output_file_timed, index=False)
     print(f"Combined output written to:          {combined_output_file_timed}")
 
     # count vendors after this engine filter
-    vendor_counts = df_combined['Vendor'].value_counts().reset_index()
-    vendor_counts.columns = ['Vendor', 'Count']
-    vendor_counts.to_csv(vendor_count_file_timed, index=False)
+    vendor_counts1 = df_combined['Vendor'].value_counts().reset_index()
+    vendor_counts1.columns = ['Vendor', 'Count']
+    vendor_counts1.to_csv(vendor_count_file_timed, index=False)
     print(f"Filtered vendor counts written to:   {vendor_count_file_timed}")
 
 
