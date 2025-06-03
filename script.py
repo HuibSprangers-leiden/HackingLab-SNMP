@@ -257,8 +257,14 @@ def parse_zmap_results(timestamp):
 def enterprise_count(folder_name):
     # This file contains mappings from enterprise codes to vendor names
     iana_file = "enterprise-numbers.txt"
+    # file that contains vendors that we exclude, i.e. due to not being middleware
+    excluded_vendors = "excluded_vendors.txt"
+
     with open(iana_file, 'r', encoding='utf-8') as file:
         lines = [line.rstrip('\n') for line in file if line.strip()]
+
+    with open(excluded_vendors, 'r', encoding='utf-8') as file:
+        excluded_vendors = {line.strip() for line in file if line.strip()}
 
     iana_data = []
     i = 0
@@ -282,6 +288,10 @@ def enterprise_count(folder_name):
 
     # Create an empty DataFrame to store the combined data
     df_combined = pd.DataFrame(columns=['IP', 'Enterprise Code', 'MAC', 'Vendor'])
+
+    results_dir = "results"
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
 
     # loop over all the csv files 
     for filename in os.listdir(folder_name):
@@ -312,22 +322,27 @@ def enterprise_count(folder_name):
 
             print(f"Processed {filename}")
 
+    # output the files to the 'results' folder
+    combined_output_file = os.path.join(results_dir, "combined_enterprise_output.csv")
+    vendor_count_file = os.path.join(results_dir, "vendor_counts_combined.csv")
 
     # combine csv, filter out duplicates
-    size_before = df_combined.size
+    size_before = df_combined.shape[0]
     df_combined.drop_duplicates(inplace=True)
-    print("\nDropped " + str(size_before - df_combined.size) + " duplicates")
-    combined_output_file = "combined_enterprise_output.csv"
-    df_combined.to_csv(combined_output_file, index=False)
+    print("\nDropped " + str(size_before - df_combined.shape[0]) + " duplicates")
 
+    # filter out excluded vendors
+    size_before = df_combined.shape[0]
+    df_combined = df_combined[~df_combined["Vendor"].isin(excluded_vendors)]
+    print("Dropped " + str(size_before - df_combined.shape[0]) + " excluded vendors")
+
+    df_combined.to_csv(combined_output_file, index=False)
     print(f"Combined output written to:          {combined_output_file}")
 
     # count vendors
     vendor_counts = df_combined['Vendor'].value_counts().reset_index()
     vendor_counts.columns = ['Vendor', 'Count']
-    vendor_count_file = "vendor_counts_combined.csv"
     vendor_counts.to_csv(vendor_count_file, index=False)
-
     print(f"Filtered vendor counts written to:   {vendor_count_file}")
 
 def main():
