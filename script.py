@@ -208,7 +208,6 @@ def zmap_scan(ip_list):
     finally:
         ZMAP_END = True
 
-
 def parse_zmap_results(timestamp):
     df = pd.read_csv(f'{ZMAP_FOLDER}zmap_ipv4_snmpv3_{timestamp}.csv')
 
@@ -255,20 +254,94 @@ def parse_zmap_results(timestamp):
     # Save enriched file
     df.to_csv(f'{ZMAP_FOLDER}zmap_enriched_snmp_ips_{timestamp}.csv', index=False)
 
+def enterprise_count(folder_name):
+    # This file contains mappings from enterprise codes to vendor names
+    iana_file = "enterprise-numbers.txt"
+    with open(iana_file, 'r', encoding='utf-8') as file:
+        lines = [line.rstrip('\n') for line in file if line.strip()]
+
+    iana_data = []
+    i = 0
+    while i < len(lines):
+        if lines[i].isdigit():
+            try:
+                code = lines[i].strip()
+                vendor = lines[i+1].strip()
+                iana_data.append({
+                    'Enterprise Code': code,
+                    'Vendor': vendor
+                })
+                i += 4  # Skip ahead to the next entry
+            except IndexError:
+                break
+        else:
+            i += 1
+
+    df_iana = pd.DataFrame(iana_data)
+    df_iana['Enterprise Code'] = df_iana['Enterprise Code'].astype(str)
+
+    # Create an empty DataFrame to store the combined data
+    df_combined = pd.DataFrame(columns=['IP', 'Enterprise Code', 'MAC', 'Vendor'])
+
+    # loop over all the csv files 
+    for filename in os.listdir(folder_name):
+        if filename.endswith(".csv"):
+            input_file = os.path.join(folder_name, filename)
+            
+            df_input = pd.read_csv(input_file)
+            df_input.columns = df_input.columns.str.strip()
+            df_iana.columns = df_iana.columns.str.strip()
+
+            df_input['Enterprise Code'] = df_input['Enterprise Code'].astype(str)
+
+            df_input = df_input[df_input['Enterprise Code'].notna() & (df_input['Enterprise Code'] != '')]
+            df_iana = df_iana[df_iana['Enterprise Code'].notna() & (df_iana['Enterprise Code'] != '')]
+
+            # merge the data
+            df_merged = pd.merge(df_input, df_iana, on='Enterprise Code', how='left')
+
+            if 'Vendor_x' in df_merged.columns:
+                vendor_column = 'Vendor_x'
+            else:
+                vendor_column = 'Vendor_y'
+
+            df_output = df_merged[['IP', 'Enterprise Code', 'MAC', vendor_column]]
+            df_output.columns = ['IP', 'Enterprise Code', 'MAC', 'Vendor']
+            
+            df_combined = pd.concat([df_combined, df_output], ignore_index=True)
+
+            print(f"Processed {filename}")
+
+
+    # combine csv, filter out duplicates
+    size_before = df_combined.size
+    df_combined.drop_duplicates(inplace=True)
+    print("\nDropped " + str(size_before - df_combined.size) + " duplicates")
+    combined_output_file = "combined_enterprise_output.csv"
+    df_combined.to_csv(combined_output_file, index=False)
+
+    print(f"Combined output written to:          {combined_output_file}")
+
+    # count vendors
+    vendor_counts = df_combined['Vendor'].value_counts().reset_index()
+    vendor_counts.columns = ['Vendor', 'Count']
+    vendor_count_file = "vendor_counts_combined.csv"
+    vendor_counts.to_csv(vendor_count_file, index=False)
+
+    print(f"Filtered vendor counts written to:   {vendor_count_file}")
+
 def main():
     # check if valid command line input
     if len(sys.argv) != 3:
         print("Wrong number of args, usage:\n"
               "  python3 script.py scan <path_to_ip_list>\n"
-              "  python3 script.py parse <file_name>\n")
+              "  python3 script.py parse <file_name>\n"
+              "  python3 script.py enterprise_count <folder_name>\n")
         sys.exit(1)
 
     mode = sys.argv[1]
 
     if mode == "scan":
-        if len(sys.argv) != 3:
-            print("Usage: python3 script.py scan <path_to_ip_list>")
-            sys.exit(1)
         ip_list = sys.argv[2]
 
         sniff_thread = threading.Thread(target=tshark_sniff)
@@ -286,10 +359,22 @@ def main():
 
         parse_tshark_from_file(file_name, True)
 
+    elif mode == "enterprise_count":
+        folder_name = sys.argv[2]
+
+        enterprise_count(folder_name)
+
     elif mode == "zmap_parse":
         timestamp = sys.argv[2]
 
         parse_zmap_results(timestamp)
+
+    else:
+        print("Mode not found, usage:\n"
+            "  python3 script.py scan <path_to_ip_list>\n"
+            "  python3 script.py parse <file_name>\n"
+            "  python3 script.py enterprise_count <folder_name>\n")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
