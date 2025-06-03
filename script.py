@@ -254,7 +254,7 @@ def parse_zmap_results(timestamp):
     # Save enriched file
     df.to_csv(f'{ZMAP_FOLDER}zmap_enriched_snmp_ips_{timestamp}.csv', index=False)
 
-def enterprise_count(folder_name):
+def enterprise_count(folder_name, reboot_threshold):
     # This file contains mappings from enterprise codes to vendor names
     iana_file = "enterprise-numbers.txt"
     # file that contains vendors that we exclude, i.e. due to not being middleware
@@ -304,18 +304,13 @@ def enterprise_count(folder_name):
 
             df_input['Enterprise Code'] = df_input['Enterprise Code'].astype(str)
 
-            df_input = df_input[df_input['Enterprise Code'].notna() & (df_input['Enterprise Code'] != '')]
+            df_input = df_input[df_input['Enterprise Code'].notna() & (df_input['Enterprise Code'] != '') & df_input['Engine Time'] > 0]
             df_iana = df_iana[df_iana['Enterprise Code'].notna() & (df_iana['Enterprise Code'] != '')]
 
             # merge the data
             df_merged = pd.merge(df_input, df_iana, on='Enterprise Code', how='left')
 
-            if 'Vendor_x' in df_merged.columns:
-                vendor_column = 'Vendor_x'
-            else:
-                vendor_column = 'Vendor_y'
-
-            df_output = df_merged[['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', vendor_column]]
+            df_output = df_merged[['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor_x']]
             df_output.columns = ['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor']
             
             df_combined = pd.concat([df_combined, df_output], ignore_index=True)
@@ -324,7 +319,9 @@ def enterprise_count(folder_name):
 
     # output the files to the 'results' folder
     combined_output_file = os.path.join(results_dir, "combined_enterprise_output.csv")
+    combined_output_file_timed = os.path.join(results_dir, "combined_enterprise_output_timed.csv")
     vendor_count_file = os.path.join(results_dir, "vendor_counts_combined.csv")
+    vendor_count_file_timed = os.path.join(results_dir, "vendor_counts_combined_timed.csv")
 
     # combine csv, filter out duplicates
     size_before = df_combined.shape[0]
@@ -345,18 +342,34 @@ def enterprise_count(folder_name):
     vendor_counts.to_csv(vendor_count_file, index=False)
     print(f"Filtered vendor counts written to:   {vendor_count_file}")
 
-def main():
-    # check if valid command line input
-    if len(sys.argv) != 3:
-        print("Wrong number of args, usage:\n"
-              "  python3 script.py scan <path_to_ip_list>\n"
-              "  python3 script.py parse <file_name>\n"
-              "  python3 script.py enterprise_count <folder_name>\n")
-        sys.exit(1)
+    # filter on engine time in seconds
+    size_before = df_combined.shape[0]
+    df_combined['Engine Time'] = pd.to_numeric(df_combined['Engine Time'])
+    df_combined = df_combined[df_combined['Engine Time'] >= reboot_threshold]
+    print("\nDropped " + str(size_before - df_combined.shape[0]) + " entries based on engine time of " + str(size_before) + " total.")
+    df_combined.to_csv(combined_output_file_timed, index=False)
+    print(f"Combined output written to:          {combined_output_file_timed}")
 
+    # count vendors after this engine filter
+    vendor_counts = df_combined['Vendor'].value_counts().reset_index()
+    vendor_counts.columns = ['Vendor', 'Count']
+    vendor_counts.to_csv(vendor_count_file_timed, index=False)
+    print(f"Filtered vendor counts written to:   {vendor_count_file_timed}")
+
+
+def commandline_help():
+    print("Script usage:\n"
+            "  python3 script.py scan <path_to_ip_list>\n"
+            "  python3 script.py parse <file_name>\n"
+            "  python3 script.py enterprise_count <folder_name> reboot_threshold\n")
+    sys.exit(1)
+
+def main():
     mode = sys.argv[1]
 
     if mode == "scan":
+        if len(sys.argv) != 3:
+            commandline_help()
         ip_list = sys.argv[2]
 
         sniff_thread = threading.Thread(target=tshark_sniff)
@@ -370,14 +383,19 @@ def main():
         sniff_thread.join()
 
     elif mode == "parse":
+        if len(sys.argv) != 3:
+            commandline_help()
         file_name = sys.argv[2]
 
         parse_tshark_from_file(file_name, True)
 
     elif mode == "enterprise_count":
-        folder_name = sys.argv[2]
+        if len(sys.argv) != 4:
+            commandline_help()
+        folder_name      = sys.argv[2]
+        reboot_threshold = int(sys.argv[3])
 
-        enterprise_count(folder_name)
+        enterprise_count(folder_name, reboot_threshold)
 
     elif mode == "zmap_parse":
         timestamp = sys.argv[2]
@@ -385,11 +403,8 @@ def main():
         parse_zmap_results(timestamp)
 
     else:
-        print("Mode not found, usage:\n"
-            "  python3 script.py scan <path_to_ip_list>\n"
-            "  python3 script.py parse <file_name>\n"
-            "  python3 script.py enterprise_count <folder_name>\n")
-        sys.exit(1)
+        print("Mode not found.")
+        commandline_help()
 
 if __name__ == "__main__":
     main()
