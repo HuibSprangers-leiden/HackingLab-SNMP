@@ -27,8 +27,10 @@ def get_ip_address():
     return s.getsockname()[0]
 
 
-def tshark_sniff():
+def tshark_sniff(ip_list_path):
     global ZMAP_END
+
+    ip_file_name = get_file_name(ip_list_path)
 
     my_ip = get_ip_address()
     cmd = [
@@ -65,13 +67,13 @@ def tshark_sniff():
         timeStamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
 
         # save to csv, so we can parse afterwards in case of unexpected errors
-        with open(f"{TSHARK_FOLDER}tshark_output_{timeStamp}.csv", "w") as csvfile:
+        with open(f"{TSHARK_FOLDER}tshark_{ip_file_name}_output_{timeStamp}.csv", "w") as csvfile:
             writer = csv.writer(csvfile, delimiter=';')
             for line in lines:
                 row = line.strip().split(';')
                 writer.writerow(row)
 
-        print("TShark capture ended. Saved to "  + f"tshark_output_{timeStamp}.csv. This can now be parsed.")
+        print("TShark capture ended. Saved to "  + f"tshark_{ip_file_name}_output_{timeStamp}.csv. This can now be parsed.")
 
     except Exception as e:
         print(f"Error during TShark sniffing: {e}")
@@ -104,9 +106,9 @@ def get_enterprise_codes_df():
 
     return df_iana
 
-def parse_tshark_from_file(file_name, save_to_file):
+def parse_tshark_from_file(file_path, save_to_file):
     try:
-        with open(file_name, "r") as f:
+        with open(file_path, "r") as f:
             reader = csv.reader(f, delimiter=';')
             lines = list(reader)
             start = 0
@@ -140,22 +142,33 @@ def parse_tshark_from_file(file_name, save_to_file):
         df_merged = pd.merge(df_data, df_iana, on='Enterprise code', how='left')
 
         if save_to_file:
+            # extract the ip file name
+            ip_file_name_pattern = r'(?<=tshark_)(.*?)(?=_output)'
+            ip_file_name_match = re.search(ip_file_name_pattern, file_path)
+
+            if ip_file_name_match:
+                ip_file_name = ip_file_name_match.group()
+            else:
+                # raise error as this should match
+                raise ValueError(f"Ip file not found in file name: {file_path}. The file name should contain an time stamp.")
+
+                
             # Check if file has timestamp and reuse it for consistency
-            timestamp_match = re.search(r'(\d{2}_\d{2}_\d{2}_\d{2}_\d{2})', file_name)
+            timestamp_match = re.search(r'(\d{2}_\d{2}_\d{2}_\d{2}_\d{2})', file_path)
             if timestamp_match:
                 timestamp = timestamp_match.group(1)
             else:
                 # raise error as this should match
-                raise ValueError(f"Timestamp not found in file name: {file_name}. The file name should contain an time stamp.")
+                raise ValueError(f"Timestamp not found in file name: {file_path}. The file name should contain an time stamp.")
 
             # Save file
             df_merged.columns = ['IP','EngineID','Engine Boots', 'Engine Time', 'Enterprise Code', 'MAC', 'Vendor']
-            output_file = f'{PARSED_OUTPUTS_FOLDER}parsed_output_{timestamp}.csv'
+            output_file = f'{PARSED_OUTPUTS_FOLDER}parsed_{ip_file_name}_output_{timestamp}.csv'
             df_merged.to_csv(output_file, index=False)
-            print(f"Parsed succesfully to: {PARSED_OUTPUTS_FOLDER}parsed_output_{timestamp}.csv")
+            print(f"Parsed succesfully to: {PARSED_OUTPUTS_FOLDER}parsed_{ip_file_name}_output_{timestamp}.csv")
 
     except Exception as e:
-        print(f"Failed to parse CSV {file_name}: {e}")
+        print(f"Failed to parse CSV {file_path}: {e}")
         print(traceback.format_exc())
 
     
@@ -191,14 +204,16 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
     return (enterprise_code, mac)
     
 
-def zmap_scan(ip_list):
+def zmap_scan(ip_list_path):
     global ZMAP_END
+
+    ip_file_name = get_file_name(ip_list_path)
 
     cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
     timestamp = str(cur_time.day)+str(cur_time.month)+str(cur_time.hour)+str(cur_time.minute)
-    output_filename = f"zmap_ipv4_snmpv3_{timestamp}.csv" 
+    output_filename = f"zmap_{ip_file_name}_snmpv3_{timestamp}.csv" 
 
-    command = f"sudo zmap -M udp -p 161 -B 10M --probe-args=file:./config/snmp3_161.pkt -O csv -f \"*\" -o {ZMAP_FOLDER}{output_filename} -c 10 -w {ip_list} --output-filter=\"success=1 && repeat=0\""
+    command = f"sudo zmap -M udp -p 161 -B 10M --probe-args=file:./config/snmp3_161.pkt -O csv -f \"*\" -o {ZMAP_FOLDER}{output_filename} -c 10 -w {ip_list_path} --output-filter=\"success=1 && repeat=0\""
     try:
         print("ZMap scan started...")
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -209,8 +224,8 @@ def zmap_scan(ip_list):
     finally:
         ZMAP_END = True
 
-def parse_zmap_results(timestamp):
-    df = pd.read_csv(f'{ZMAP_FOLDER}zmap_ipv4_snmpv3_{timestamp}.csv')
+def parse_zmap_results(ip_file_name, timestamp):
+    df = pd.read_csv(f"zmap_{ip_file_name}_snmpv3_{timestamp}.csv")
 
     # Add a new column for ASN/description
     asn_numbers = []
@@ -365,6 +380,10 @@ def date_to_engine_time(reboot_date_str, scan_date):
     engine_time = int(time_difference.total_seconds())
     return engine_time
 
+def get_file_name(file_path):
+    pattern = r'[\w-]+?(?=\.)'
+    return re.search(pattern, file_path).group()
+
 def commandline_help():
     print("Script usage:\n"
             "  python3 script.py scan <path_to_ip_list>\n"
@@ -378,10 +397,10 @@ def main():
     if mode == "scan":
         if len(sys.argv) != 3:
             commandline_help()
-        ip_list = sys.argv[2]
+        ip_list_path = sys.argv[2]
 
-        sniff_thread = threading.Thread(target=tshark_sniff)
-        zmap_thread = threading.Thread(target=zmap_scan, args=(ip_list,))
+        sniff_thread = threading.Thread(target=tshark_sniff, args=(ip_list_path,))
+        zmap_thread = threading.Thread(target=zmap_scan, args=(ip_list_path,))
 
         sniff_thread.start()
         time.sleep(1) # Wait for tshark to start capturing
@@ -406,9 +425,10 @@ def main():
         enterprise_count(folder_name, reboot_threshold)
 
     elif mode == "zmap_parse":
-        timestamp = sys.argv[2]
+        ip_file_name = sys.argv[2]
+        timestamp = sys.argv[3]
 
-        parse_zmap_results(timestamp)
+        parse_zmap_results(ip_file_name, timestamp)
 
     else:
         print("Mode not found.")
