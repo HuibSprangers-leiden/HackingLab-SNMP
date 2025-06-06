@@ -303,6 +303,8 @@ def enterprise_count(folder_name, reboot_threshold):
     if not os.path.exists(RESULTS_OUTPUT_FOLDER):
         os.makedirs(RESULTS_OUTPUT_FOLDER)
 
+    processed_ips = {}
+
     # loop over all the csv files 
     for filename in os.listdir(folder_name):
         if filename.endswith(".csv"):
@@ -333,6 +335,24 @@ def enterprise_count(folder_name, reboot_threshold):
 
             df_merged['Scan Date'] = scan_date 
             df_merged['Reboot Date'] = df_merged['Engine Time'].apply(lambda x: engine_time_to_date(int(x), datetime.datetime.strptime(scan_date, '%m_%d_%H_%M_%S')))
+
+            # go through the merged df and update df_combined
+            for index, row in df_merged.iterrows():
+                ip = row['IP']
+                reboot_date = row['Reboot Date']
+                scan_date = row['Scan Date']
+
+                # Ccheck if ip already exists
+                if ip in df_combined['IP'].values:
+                    # find this row, then check to delete and just add the new row
+                    existing_row = df_combined[df_combined['IP'] == ip]
+                    existing_reboot_date = existing_row['Reboot Date'].values[0]
+
+                    # delete if difference is more than a day
+                    if datetime.datetime.strptime(reboot_date, '%m_%d_%Y_%H_%M_%S') > datetime.datetime.strptime(existing_reboot_date, '%m_%d_%Y_%H_%M_%S') + datetime.timedelta(seconds=86400):
+                        row_index = df_combined[df_combined['IP'] == ip].index
+                        df_combined = df_combined.drop(row_index)
+                        print("MORE UP TO DATE, old: " + existing_reboot_date + ", new: " + reboot_date)
 
             df_output = df_merged[['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor_x', 'Scan Date', 'Reboot Date']]
             df_output.columns = ['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor', 'Scan Date', 'Reboot Date']
@@ -382,15 +402,14 @@ def enterprise_count(folder_name, reboot_threshold):
 
 def engine_time_to_date(engine_time, scan_date):
     if isinstance(scan_date, str):
-            scan_date = datetime.datetime.strptime(scan_date, '%m_%d_%H_%M_%S')
+        scan_date = datetime.datetime.strptime(scan_date, '%m_%d_%H_%M_%S')
             
-    # TODO: put the year in the file name as well
     scan_date = scan_date.replace(year=2025)
     reboot_time = scan_date - datetime.timedelta(seconds=engine_time)
-    return reboot_time.strftime('%m_%d_%y_%H_%M_%S')
+    return reboot_time.strftime('%m_%d_%Y_%H_%M_%S')
 
 def date_to_engine_time(reboot_date_str, scan_date):
-    reboot_date = datetime.datetime.strptime(reboot_date_str, '%m_%d_%H_%M_%S')
+    reboot_date = datetime.datetime.strptime(reboot_date_str, '%m_%d_%Y_%H_%M_%S')
     time_difference = scan_date - reboot_date
 
     engine_time = int(time_difference.total_seconds())
