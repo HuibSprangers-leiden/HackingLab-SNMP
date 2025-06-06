@@ -4,12 +4,46 @@ import sys
 import pandas as pd
 import csv
 
+def translate_vendor(input_vendor: str):
+    with open("translation.csv", 'r') as translator:
+        df = pd.read_csv(translator)
+        for i, vendor in enumerate(df['Vendor']):
+            if vendor == input_vendor:
+                return df['translation'][i]
+    return 'no_match'
 
-def fetch_CVEs(vendor: str, time_seconds: int):
+
+def fetch_CVEs_with_split(vendor, engine_time, split_size=5_000_000, end_date: datetime=None):
+    results = []
+    if vendor == 'no_match':
+        return pd.DataFrame()
+
+    if end_date is None:
+        end_date = datetime.now()
+
+    # How many seconds ago is end_date from now?
+    end_time_s = int((datetime.now() - end_date).total_seconds())
+    
+    start = engine_time 
+    while start > end_time_s:
+        end = max(start - split_size, end_time_s)
+        df = fetch_CVEs(vendor, start_time_s=start, end_time_s=end)
+        if df is not None:
+            results.append(df)
+        start = end  # move further toward present (i.e., decrease "seconds ago")
+
+    return pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+
+
+def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
     # Use NVD API to fetch CVEs
     base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-    start_date = (datetime.now() - timedelta(seconds=time_seconds)).strftime("%Y-%m-%dT%H:%M:%S")
-    end_date = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+    start_date = (datetime.now() - timedelta(seconds=start_time_s)).strftime("%Y-%m-%dT%H:%M:%S")
+    if not end_time_s:
+        end_date = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    else:
+        end_date = (datetime.now() - timedelta(seconds=end_time_s)).strftime("%Y-%m-%dT%H:%M:%S")
 
     params = {
         'keywordSearch': vendor,
@@ -50,6 +84,7 @@ def fetch_CVEs(vendor: str, time_seconds: int):
     df = pd.DataFrame(data)
     print("\nDataFrame:")
     print(df)
+    return df
 
 if __name__ == "__main__":
     if len(sys.argv) < 3 or len(sys.argv) > 4:
