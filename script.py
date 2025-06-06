@@ -145,8 +145,8 @@ def parse_tshark_from_file(file_name, save_to_file):
             if timestamp_match:
                 timestamp = timestamp_match.group(1)
             else:
-                cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-                timestamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",cur_time.month, cur_time.day, cur_time.hour, cur_time.minute, cur_time.second)
+                # raise error as this should match
+                raise ValueError(f"Timestamp not found in file name: {file_name}. The file name should contain an time stamp.")
 
             # Save file
             df_merged.columns = ['IP','EngineID','Engine Boots', 'Engine Time', 'Enterprise Code', 'MAC', 'Vendor']
@@ -354,6 +354,16 @@ def enterprise_count(folder_name, reboot_threshold):
     vendor_counts1.to_csv(vendor_count_file_timed, index=False)
     print(f"Filtered vendor counts written to:   {vendor_count_file_timed}")
 
+def engine_time_to_date(engine_time, scan_date):
+    reboot_time = scan_date - datetime.timedelta(seconds=engine_time)
+    return reboot_time.strftime('%Y-%m-%d %H:%M:%S')
+
+def date_to_engine_time(reboot_date_str, scan_date):
+    reboot_date = datetime.datetime.strptime(reboot_date_str, '%Y-%m-%d %H:%M:%S')
+    time_difference = scan_date - reboot_date
+
+    engine_time = int(time_difference.total_seconds())
+    return engine_time
 
 def commandline_help():
     print("Script usage:\n"
