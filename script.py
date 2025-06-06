@@ -18,6 +18,8 @@ ZMAP_FOLDER = './outputs/zmap/'
 TSHARK_FOLDER = './outputs/tshark/'
 PARSED_OUTPUTS_FOLDER = './outputs/parsed/'
 RESULTS_OUTPUT_FOLDER = './outputs/results/'
+IANA_FILE = "config/enterprise-numbers.txt"
+EXCLUDED_VENDORS = "config/excluded_vendors.txt"
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -76,9 +78,7 @@ def tshark_sniff():
         print(traceback.format_exc())
 
 def get_enterprise_codes_df():
-    # This file contains mappings from enterprise codes to vendor names
-    iana_file = "config/enterprise-numbers.txt"
-    with open(iana_file, 'r', encoding='utf-8') as file:
+    with open(IANA_FILE, 'r', encoding='utf-8') as file:
         lines = [line.rstrip('\n') for line in file if line.strip()]
 
     iana_data = []
@@ -256,15 +256,10 @@ def parse_zmap_results(timestamp):
     df.to_csv(f'{ZMAP_FOLDER}zmap_enriched_snmp_ips_{timestamp}.csv', index=False)
 
 def enterprise_count(folder_name, reboot_threshold):
-    # This file contains mappings from enterprise codes to vendor names
-    iana_file = "config/enterprise-numbers.txt"
-    # file that contains vendors that we exclude, i.e. due to not being middleware
-    excluded_vendors = "config/excluded_vendors.txt"
-
-    with open(iana_file, 'r', encoding='utf-8') as file:
+    with open(IANA_FILE, 'r', encoding='utf-8') as file:
         lines = [line.rstrip('\n') for line in file if line.strip()]
 
-    with open(excluded_vendors, 'r', encoding='utf-8') as file:
+    with open(EXCLUDED_VENDORS, 'r', encoding='utf-8') as file:
         excluded_vendors = {line.strip() for line in file if line.strip()}
 
     iana_data = []
