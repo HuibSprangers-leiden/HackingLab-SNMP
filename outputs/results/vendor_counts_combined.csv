@@ -1,63 +1,64 @@
 Vendor,Count
-net-snmp,3284
-Ambit Microsystems Corporation,1379
-Thomson Inc.,990
-"HUAWEI Technology Co.,Ltd",609
-"Juniper Networks, Inc.",575
-OneAccess,370
-"Brocade Communications Systems, Inc.",346
-Nokia (formerly 'Alcatel-Lucent'),242
-"Brocade Communication Systems, Inc. (formerly 'Foundry Networks, Inc.')",231
-"Fortinet, Inc.",188
-H3C,161
-"SonicWALL, Inc.",115
-Compaq,99
-Broadcom Limited,59
-"Aruba, a Hewlett Packard Enterprise company",34
-"U.C. Davis, ECE Dept. Tom",30
-Hewlett-Packard,29
-"Ericsson, Inc. (formerly 'RedBack Networks')",27
-Sarian Systems Limited,25
-FS.COM INC,24
-"NetScreen Technologies, Inc.",18
-Dell Inc.,16
-WatchGuard Technologies Inc.,15
+unknown,2233
+Ambit Microsystems Corporation,1407
+Thomson Inc.,1008
+"Brocade Communications Systems, Inc.",639
+H3C,436
+"Brocade Communication Systems, Inc. (formerly 'Foundry Networks, Inc.')",366
+"Fortinet, Inc.",262
+Nokia (formerly 'Alcatel-Lucent'),251
+Compaq,219
+"SonicWALL, Inc.",154
+Broadcom Limited,90
+Hewlett-Packard,52
+The FreeBSD Project,37
+"Aruba, a Hewlett Packard Enterprise company",37
+"U.C. Davis, ECE Dept. Tom",36
+Sarian Systems Limited,36
+"Ericsson, Inc. (formerly 'RedBack Networks')",32
+FS.COM INC,31
+Dell Inc.,28
+"NetScreen Technologies, Inc.",27
+Netgear,26
+SNMP Research,19
+WatchGuard Technologies Inc.,18
+"Advantech Co., Ltd.",18
+SNMP Laboratories (formerly 'pysnmp'),15
 AWIND Inc,14
-"Advantech Co., Ltd.",14
-The FreeBSD Project,12
-Netgear,9
-SNMP Research,9
-SNMP Laboratories (formerly 'pysnmp'),8
+OneAccess,14
 Zeus Technology Ltd,7
+American Power Conversion Corp.,7
 Realtek Semiconductor corp.,6
-American Power Conversion Corp.,5
-Reserved,4
-MikroTik,4
+General Instrument,5
+Meinberg,5
+"Casa Systems, Inc.",5
+BinTec Communications GmbH,5
 LANCOM Systems,4
-BinTec Communications GmbH,3
+"Moxa Technologies Co., Ltd.",4
+Siemens AG,4
+Extreme Networks,3
+"Force10 Networks, Inc.",3
+OpenBSD Project,3
+Reserved,3
 "Raritan Computer, Inc.",3
-"Force10 Networks, Inc.",2
-Siemens AG,2
-Microsoft,2
+CANON Inc.,3
 HW group s.r.o,2
-Extreme Networks,2
-OpenBSD Project,2
-CANON Inc.,2
 ACCTON Technology,2
-DrayTek Corporation,2
+"Ubiquiti Networks, Inc.",2
+Microsoft,2
+"Ruijie Networks Co., Ltd. (formerly 'Start Network Technology Co., Ltd.')",1
+Netscaler,1
+TP-Link Systems Inc.,1
 Colubris Networks Inc.,1
-Vertiv (formerly 'Emerson Computer Power'),1
+"ATEN INTERNATIONAL CO., LTD.",1
 Avocent Corporation,1
-RICOH Co. Ltd.,1
-"D-Link Systems, Inc.",1
-vIPtela Inc.,1
+Epilogue,1
+Vertiv (formerly 'Emerson Computer Power'),1
 VMware Inc.,1
 "ZPE Systems, Inc",1
-Epilogue,1
+KYOCERA Corporation,1
 Opengear Inc.,1
-"Ubiquiti Networks, Inc.",1
+Acme Packet,1
 3Com,1
 Packeteer Inc.,1
 Hewlett Packard Enterprise,1
-Netscaler,1
-General Instrument,1

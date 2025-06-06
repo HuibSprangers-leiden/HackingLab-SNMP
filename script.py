@@ -307,6 +307,14 @@ def enterprise_count(folder_name, reboot_threshold):
     for filename in os.listdir(folder_name):
         if filename.endswith(".csv"):
             input_file = os.path.join(folder_name, filename)
+
+            # get scan date from this file name
+            timestamp_match = re.search(r'(\d{2}_\d{2}_\d{2}_\d{2}_\d{2})', filename)
+            if timestamp_match:
+                scan_date = timestamp_match.group(1)
+            else:
+                # raise error as this should match
+                raise ValueError(f"Timestamp not found in file name: {filename}. The file name should contain an time stamp.")
             
             df_input = pd.read_csv(input_file)
             df_input.columns = df_input.columns.str.strip()
@@ -323,8 +331,11 @@ def enterprise_count(folder_name, reboot_threshold):
             # if no vendor, we categorise as 'unknown'
             df_merged['Vendor_x'] = df_merged['Vendor_x'].fillna('unknown')
 
-            df_output = df_merged[['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor_x']]
-            df_output.columns = ['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor']
+            df_merged['Scan Date'] = scan_date 
+            df_merged['Reboot Date'] = df_merged['Engine Time'].apply(lambda x: engine_time_to_date(int(x), datetime.datetime.strptime(scan_date, '%m_%d_%H_%M_%S')))
+
+            df_output = df_merged[['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor_x', 'Scan Date', 'Reboot Date']]
+            df_output.columns = ['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor', 'Scan Date', 'Reboot Date']
             
             df_combined = pd.concat([df_combined, df_output], ignore_index=True)
 
@@ -370,11 +381,16 @@ def enterprise_count(folder_name, reboot_threshold):
     print(f"Filtered vendor counts written to:   {vendor_count_file_timed}")
 
 def engine_time_to_date(engine_time, scan_date):
+    if isinstance(scan_date, str):
+            scan_date = datetime.datetime.strptime(scan_date, '%m_%d_%H_%M_%S')
+            
+    # TODO: put the year in the file name as well
+    scan_date = scan_date.replace(year=2025)
     reboot_time = scan_date - datetime.timedelta(seconds=engine_time)
-    return reboot_time.strftime('%Y-%m-%d %H:%M:%S')
+    return reboot_time.strftime('%m_%d_%y_%H_%M_%S')
 
 def date_to_engine_time(reboot_date_str, scan_date):
-    reboot_date = datetime.datetime.strptime(reboot_date_str, '%Y-%m-%d %H:%M:%S')
+    reboot_date = datetime.datetime.strptime(reboot_date_str, '%m_%d_%H_%M_%S')
     time_difference = scan_date - reboot_date
 
     engine_time = int(time_difference.total_seconds())
