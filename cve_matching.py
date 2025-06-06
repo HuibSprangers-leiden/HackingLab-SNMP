@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import requests
 import sys
 import pandas as pd
+import csv
 
 
 def fetch_CVEs(vendor: str, time_seconds: int):
@@ -51,11 +52,32 @@ def fetch_CVEs(vendor: str, time_seconds: int):
     print(df)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python cve_matching.py <vendor name> <engine time>")
+    if len(sys.argv) < 3 or len(sys.argv) > 4:
+        print("Usage: python cve_matching.py <engine time> <option> <vendor name> ")
+        print("option types:  \n",\
+            "<none> - take vendor name as is\n",\
+            "'-t' - translate vendor name via translation.csv file\n"\
+            "'-a' - run for all vendors in translation file")        
         sys.exit(1)
     
-    vendor = sys.argv[1]
-    engine_time = int(float(sys.argv[2]))
-    
-    fetch_CVEs(vendor, engine_time)
+    engine_time = int(float(sys.argv[1]))
+    #Runs for vendor name translated to searchable name in translation file
+    if sys.argv[2] == '-t' and len(sys.argv) == 4:
+        with open("translation.csv", 'r') as translator:
+            vendor_name = sys.argv[3]
+            df = pd.read_csv(translator)
+            for i, vendor in enumerate(df['Vendor']):
+                if vendor == vendor_name:
+                     fetch_CVEs(df['translation'][i], engine_time)
+                     break
+    #Runs for all vendors present in translation file
+    elif sys.argv[2] == '-a' and len(sys.argv) == 3:
+        with open("translation.csv", 'r') as translator:
+            df = pd.read_csv(translator)
+            for row in df['translation']:
+                        fetch_CVEs(row, engine_time)
+    #Takes vendor name and runs as is
+    elif len(sys.argv) == 3:
+        vendor = sys.argv[2]
+        fetch_CVEs(vendor, engine_time)
+       
