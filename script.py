@@ -412,9 +412,9 @@ def main():
     elif mode == "parse":
         if len(sys.argv) != 3:
             commandline_help()
-        file_name = sys.argv[2]
+        file_path = sys.argv[2]
 
-        parse_tshark_from_file(file_name, True)
+        parse_tshark_from_file(file_path, True)
 
     elif mode == "enterprise_count":
         if len(sys.argv) != 4:
