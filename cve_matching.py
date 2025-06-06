@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
 import requests
+import sys
 import pandas as pd
 
 
 def fetch_CVEs(vendor: str, time_seconds: int):
-    
     # Use NVD API to fetch CVEs
     base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
     start_date = (datetime.now() - timedelta(seconds=time_seconds)).strftime("%Y-%m-%dT%H:%M:%S")
@@ -51,5 +51,11 @@ def fetch_CVEs(vendor: str, time_seconds: int):
     print(df)
 
 if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python cve_matching.py <vendor name> <engine time>")
+        sys.exit(1)
     
-    fetch_CVEs('fortinet', 1000000)
+    vendor = sys.argv[1]
+    engine_time = int(float(sys.argv[2]))
+    
+    fetch_CVEs(vendor, engine_time)
