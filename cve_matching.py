@@ -3,6 +3,7 @@ import requests
 import sys
 import pandas as pd
 import csv
+import time
 
 def translate_vendor(input_vendor: str):
     with open("translation.csv", 'r') as translator:
@@ -31,6 +32,7 @@ def fetch_CVEs_with_split(vendor, engine_time, split_size=5_000_000, end_date: d
         if df is not None:
             results.append(df)
         start = end  # move further toward present (i.e., decrease "seconds ago")
+        time.sleep(1) # Sleep to avoid too many requests
 
     return pd.concat(results, ignore_index=True) if results else pd.DataFrame()
 
@@ -58,6 +60,7 @@ def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
             cve_data = {
                 'CVE_ID': cve['cve']['id'],
                 'Description': cve['cve']['descriptions'][0]['value'],
+                'Published': cve['cve']['published'],
                 'CVSS_Score': None,
                 'Severity': None,
                 'CVSS_Version': None,
@@ -82,8 +85,8 @@ def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
     
     # Create DataFrame
     df = pd.DataFrame(data)
-    print("\nDataFrame:")
-    print(df)
+    #print("\nDataFrame:")
+    #print(df)
     return df
 
 if __name__ == "__main__":
