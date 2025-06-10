@@ -72,6 +72,7 @@ def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
                     cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore']
                     cve_data['Severity'] = cve['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseSeverity']
                     cve_data['CVSS_Version'] = '3.1'
+                    # TODO: EPSS and Exploitability Score are NOT the same!! Fix
                     cve_data['EPSS_Score'] = cve['cve']['metrics']['cvssMetricV31'][0]['exploitabilityScore']
                 elif 'cvssMetricV2' in cve['cve']['metrics']:
                     cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore']
