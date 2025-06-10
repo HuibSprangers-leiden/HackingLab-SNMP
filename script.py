@@ -1,17 +1,18 @@
-from multiprocessing import Pipe
-import subprocess, sys, os
-import threading
-import signal
-import time
-import datetime
-import socket
 import csv
-import traceback
-import pandas as pd
-import numpy as np
-from ipwhois import IPWhois
-from tqdm import tqdm
+import datetime
+import os
 import re
+import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
+import traceback
+
+import numpy as np
+import pandas as pd
+from ipwhois import IPWhois
 
 ZMAP_END = False
 ZMAP_FOLDER = './outputs/zmap/'
@@ -224,51 +225,52 @@ def zmap_scan(ip_list_path):
     finally:
         ZMAP_END = True
 
-def parse_zmap_results(ip_file_name, timestamp):
-    df = pd.read_csv(f"zmap_{ip_file_name}_snmpv3_{timestamp}.csv")
+def parse_zmap_results(input_file):
+    df = pd.read_csv(input_file)
 
-    # Add a new column for ASN/description
     asn_numbers = []
-    asn_descs = []
     asn_country = []
     asn_date = []
     cidr_blocks = []
-    net_name = []
-    net_type = []
 
-    for ip in tqdm(df['saddr']):
+    asns = {}
+
+    for _, row in df.iterrows():
         try:
-            obj = IPWhois(ip)
+            obj = IPWhois(row['IP'])  # replace 'IP' with the actual column name of IP addresses in your CSV
             res = obj.lookup_rdap()
-            asn_numbers.append(res.get('asn'))
-            asn_descs.append(res.get('asn_description'))
+
+            asn_num = res.get('asn')
+            asns[asn_num] = asns.get(asn_num, 0) + 1
+            asn_numbers.append(asn_num)
+
             asn_country.append(res.get('asn_country_code'))
             asn_date.append(res.get('asn_date'))
 
             network = res.get('network', {})
             cidr_blocks.append(network.get('cidr'))
-            net_name.append(network.get('name'))
-            net_type.append(network.get('type'))
 
-        except Exception:
-            asn_numbers.append(None)
-            asn_descs.append(None)
+        except Exception as e:
             asn_country.append(None)
             asn_date.append(None)
             cidr_blocks.append(None)
-            net_name.append(None)
-            net_type.append(None)
+            asn_numbers.append(None)
 
-    df['asn'] = asn_numbers
-    df['asn_description'] = asn_descs
-    df['asn_country'] = asn_country
-    df['asn_date'] = asn_date
-    df['cidr'] = cidr_blocks
-    df['net_name'] = net_name
-    df['net_type'] = net_type
+    enriched_df = pd.DataFrame({
+        'IP': df['IP'],
+        'asn_num': asn_numbers,
+        'asn_country': asn_country,
+        'asn_date': asn_date,
+        'cidr': cidr_blocks,
+    })
 
-    # Save enriched file
-    df.to_csv(f'{ZMAP_FOLDER}zmap_enriched_snmp_ips_{timestamp}.csv', index=False)
+    # Save to a different CSV file using the current timestamp
+    cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+    timestamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}", cur_time.month, cur_time.day, cur_time.hour,
+                           cur_time.minute, cur_time.second)
+
+    enriched_df.to_csv(f'{ZMAP_FOLDER}zmap_enrichment_only_{timestamp}.csv', index=False)
+    print(asns)     # Shows AS numbers and their count
 
 def enterprise_count(folder_name, reboot_threshold):
     with open(IANA_FILE, 'r', encoding='utf-8') as file:
@@ -305,7 +307,7 @@ def enterprise_count(folder_name, reboot_threshold):
 
     processed_ips = {}
 
-    # loop over all the csv files 
+    # loop over all the csv files
     for filename in os.listdir(folder_name):
         if filename.endswith(".csv"):
             input_file = os.path.join(folder_name, filename)
@@ -317,7 +319,7 @@ def enterprise_count(folder_name, reboot_threshold):
             else:
                 # raise error as this should match
                 raise ValueError(f"Timestamp not found in file name: {filename}. The file name should contain an time stamp.")
-            
+
             df_input = pd.read_csv(input_file)
             df_input.columns = df_input.columns.str.strip()
             df_iana.columns = df_iana.columns.str.strip()
@@ -333,7 +335,7 @@ def enterprise_count(folder_name, reboot_threshold):
             # if no vendor, we categorise as 'unknown'
             df_merged['Vendor_x'] = df_merged['Vendor_x'].fillna('unknown')
 
-            df_merged['Scan Date'] = scan_date 
+            df_merged['Scan Date'] = scan_date
             df_merged['Reboot Date'] = df_merged['Engine Time'].apply(lambda x: engine_time_to_date(int(x), datetime.datetime.strptime(scan_date, '%m_%d_%H_%M_%S')))
 
             # go through the merged df and update df_combined
@@ -403,7 +405,7 @@ def enterprise_count(folder_name, reboot_threshold):
 def engine_time_to_date(engine_time, scan_date):
     if isinstance(scan_date, str):
         scan_date = datetime.datetime.strptime(scan_date, '%m_%d_%H_%M_%S')
-            
+
     scan_date = scan_date.replace(year=2025)
     reboot_time = scan_date - datetime.timedelta(seconds=engine_time)
     return reboot_time.strftime('%m_%d_%Y_%H_%M_%S')
@@ -423,7 +425,8 @@ def commandline_help():
     print("Script usage:\n"
             "  python3 script.py scan <path_to_ip_list>\n"
             "  python3 script.py parse <file_name>\n"
-            "  python3 script.py enterprise_count <folder_name> reboot_threshold\n")
+            "  python3 script.py enterprise_count <folder_name> reboot_threshold\n"
+            "  python3 script.py parse_asn <path_to_ip_list>\n")
     sys.exit(1)
 
 def main():
@@ -459,11 +462,11 @@ def main():
 
         enterprise_count(folder_name, reboot_threshold)
 
-    elif mode == "zmap_parse":
-        ip_file_name = sys.argv[2]
-        timestamp = sys.argv[3]
-
-        parse_zmap_results(ip_file_name, timestamp)
+    elif mode == "parse_asn":
+        if len(sys.argv) != 3:
+            commandline_help()
+        input_file_path = sys.argv[2]
+        parse_zmap_results(input_file_path)
 
     else:
         print("Mode not found.")
