@@ -1,0 +1,232 @@
+6875 Total
+4725 ISP (68,7%)
+
+ASN Number, Amount
+34968, 1
+56835, 1
+47583, 1
+62353, 1
+60404, 1
+60022, 1
+152900, 1
+196752, 1
+199752, 1
+202120, 1
+56504, 1
+202327, 1
+202692, 1
+203623, 1
+16003, 1
+43668, 1
+203256, 1
+49033, 1
+42707, 1
+199850, 1
+207456, 1
+58061, 1
+205644, 1
+48693, 1
+202302, 1
+60341, 1
+206894, 1
+214271, 1
+210269, 1
+54103, 1
+12315, 1
+8587, 1
+8315, 1
+202614, 1
+207942, 1
+51088, 1
+35467, 1
+6830, 1
+209754, 1
+44694, 1
+201372, 1
+20965, 1
+1101, 1
+41038, 1
+3327, 1
+42433, 1
+199939, 1
+39704, 1
+None, 1
+38930, 1
+215120, 1
+38913, 1
+14593, 1
+44187, 1
+59545, 1
+49453, 1
+31477, 1
+207083, 1
+201401, 1
+212238, 1
+24875, 1
+216022, 1
+201712, 1
+41480, 1
+206286, 1
+213192, 1
+30823, 1
+50917, 1
+215481, 1
+58291, 1
+206804, 1
+215512, 1
+396982, 1
+7979, 1
+200746, 1
+25369, 1
+1299, 1
+44299, 1
+49581, 1
+3265, 2
+39700, 2
+51758, 2
+205185, 2
+209181, 2
+52000, 2
+58075, 2
+34373, 2
+51942, 2
+207604, 2
+5405, 2
+210930, 2
+197156, 2
+35705, 2
+207595, 2
+8368, 2
+20847, 2
+47973, 2
+39637, 2
+207375, 2
+50554, 2
+15703, 2
+39587, 2
+12085, 2
+211895, 2
+49846, 2
+6461, 2
+200342, 2
+48886, 2
+51849, 2
+201409, 2
+39022, 2
+39591, 3
+12595, 3
+49127, 3
+203681, 3
+211043, 3
+216139, 3
+24785, 3
+20495, 3
+59554, 3
+197731, 3
+198089, 3
+48684, 3
+57043, 3
+61029, 3
+8312, 3
+205467, 4
+57758, 4
+57325, 4
+25459, 4
+29119, 4
+3920, 4
+61060, 4
+50522, 4
+201975, 4
+60893, 4
+43054, 4
+50601, 5
+35332, 5
+203368, 5
+62068, 5
+8455, 5
+30925, 5
+211588, 5
+702, 5
+142299, 5
+50053, 5
+56611, 6
+21221, 6
+35224, 6
+206176, 6
+25151, 6
+199524, 6
+61147, 6
+62390, 7
+41960, 7
+51430, 7
+21286, 7
+34108, 7
+31624, 7
+201789, 8
+20473, 8
+212477, 8
+198352, 9
+34305, 9
+36351, 9
+57866, 9
+56655, 9
+206130, 10
+201311, 10
+60068, 10
+57717, 11
+49981, 11
+28878, 11
+210728, 11
+14061, 12
+215601, 13
+13127, 13
+60781, 14
+29396, 14
+9150, 16
+44608, 17
+64289, 18
+5524, 19
+208864, 20		Weserve B.V.				Hosting		NL
+393894, 21		MSR Private Cable TV			ISP		Saint Martin
+57795, 22		NG-BLU Networks B.V.			ISP		NL
+8426, 22		Claranet Ltd.				Hosting		GB
+60131, 23		High5! B.V.				Hosting		NL
+25596, 24		Cambrium B.V.				ISP		NL
+200428, 27		SouthernHill BV				ISP		NL
+8220, 27		COLT Technology Services Group Ltd	ISP		GB
+6453, 28		TATA Communications Inc.		ISP		US
+43350, 29		NForce Entertainment B.V.		Hosting		NL
+58329, 29		Servinga GmbH				Hosting		DE
+50673, 30		Serverius				Hosting		NL
+28685, 30		Routit BV				ISP		NL
+60558, 31		Phoenix Nap, LLC.			Hosting		US
+263824, 32		Central TV and Internet Ltd.		ISP		Belize
+39647, 32		Enreach Netherlands B.V.		Hosting		NL
+NA, 32
+15966, 33		Emango Internet Services B.V.		Hosting		NL
+49544, 33		i3D.net B.V				Hosting		NL
+39686, 37		Eurofiber Nederlands BV			ISP		NL
+202425, 45		IP Volume inc				Hosting		Seychelles
+15435, 46		DELTA Fiber Nederland B.V.		ISP		NL
+201290, 48		BlackGATE B.V.				ISP		NL
+42755, 48		DataFiber Group B.V.			Hosting		NL
+12414, 49		Solcon Internetdiensten B.V.		ISP		NL
+12085 15830, 51		Equinix, Inc.				Hosting		NL/US
+42093, 52		InterRacks B.V.				Hosting		NL
+61349, 61		MaxiTEL Telecom B.V.			ISP		NL
+12859, 62		BIT BV					Hosting		NL
+50655, 68		ITS Hosted				Hosting		NL
+1103, 88		SURF B.V.				Education	NL
+42567, 94		MOJOHOST B.V.				Hosting		NL
+48635, 98		CLDIN B.V.				Hosting		NL
+34343, 98		Eweka Internet Services B.V.		ISP		NL
+16350, 105		Root Holding B.V.			Hosting		NL
+64437, 106		NForce Entertainment B.V.		Hosting		NL
+211826, 152		Istqrar for Servers Services Ltd	Hosting		Jordan
+54825, 154		Packet Host, Inc.			Hosting		US
+35055, 159		WI - Connect B.V.			ISP		NL
+15830, 206		Equinox (EMEA) Acquisition Enterprises B.V.	Hosting		NL
+1136, 221		KPN B.V.				ISP		NL
+20559, 527		Fundaments B.V.				Hosting		NL
+50266, 1213		Odido Netherlands B.V.			ISP		NL
+33915, 2582		Vodafone Libertel B.V. 			ISP		NL

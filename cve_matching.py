@@ -64,7 +64,7 @@ def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
                 'CVSS_Score': None,
                 'Severity': None,
                 'CVSS_Version': None,
-                'EPSS_Score': None
+                'Exploitablity_Score': None
             }
             
             if 'metrics' in cve['cve']:
@@ -72,13 +72,12 @@ def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
                     cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore']
                     cve_data['Severity'] = cve['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseSeverity']
                     cve_data['CVSS_Version'] = '3.1'
-                    # TODO: EPSS and Exploitability Score are NOT the same!! Fix
-                    cve_data['EPSS_Score'] = cve['cve']['metrics']['cvssMetricV31'][0]['exploitabilityScore']
+                    cve_data['Exploitablity_Score'] = cve['cve']['metrics']['cvssMetricV31'][0]['exploitabilityScore']
                 elif 'cvssMetricV2' in cve['cve']['metrics']:
                     cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore']
                     cve_data['Severity'] = cve['cve']['metrics']['cvssMetricV2'][0]['cvssData']['severity']
                     cve_data['CVSS_Version'] = '2.0'
-                    cve_data['EPSS_Score'] = cve['cve']['metrics']['cvssMetricV2'][0]['exploitabilityScore']
+                    cve_data['Exploitablity_Score'] = cve['cve']['metrics']['cvssMetricV2'][0]['exploitabilityScore']
             
             data.append(cve_data)
     else:
