@@ -66,19 +66,22 @@ def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
                 'CVSS_Version': None,
                 'Exploitablity_Score': None
             }
-            
             if 'metrics' in cve['cve']:
                 if 'cvssMetricV31' in cve['cve']['metrics']:
                     cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore']
                     cve_data['Severity'] = cve['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseSeverity']
                     cve_data['CVSS_Version'] = '3.1'
                     cve_data['Exploitablity_Score'] = cve['cve']['metrics']['cvssMetricV31'][0]['exploitabilityScore']
+                elif 'cvssMetricV30' in cve['cve']['metrics']:
+                    cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV30'][0]['cvssData']['baseScore']
+                    cve_data['Severity'] = cve['cve']['metrics']['cvssMetricV30'][0]['cvssData']['baseSeverity']
+                    cve_data['CVSS_Version'] = '3.0'
+                    cve_data['Exploitablity_Score'] = cve['cve']['metrics']['cvssMetricV30'][0]['exploitabilityScore']
                 elif 'cvssMetricV2' in cve['cve']['metrics']:
                     cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore']
                     cve_data['Severity'] = cve['cve']['metrics']['cvssMetricV2'][0]['cvssData']['severity']
                     cve_data['CVSS_Version'] = '2.0'
                     cve_data['Exploitablity_Score'] = cve['cve']['metrics']['cvssMetricV2'][0]['exploitabilityScore']
-            
             data.append(cve_data)
     else:
         print(f"Error: {res.status_code}")

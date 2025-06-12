@@ -1,7 +1,8 @@
 Vendor,Count
-unknown,2233
+unknown,1503
 Ambit Microsystems Corporation,1407
 Thomson Inc.,1008
+Arista networks,730
 "Brocade Communications Systems, Inc.",639
 H3C,436
 "Brocade Communication Systems, Inc. (formerly 'Foundry Networks, Inc.')",366
@@ -24,41 +25,41 @@ SNMP Research,19
 WatchGuard Technologies Inc.,18
 "Advantech Co., Ltd.",18
 SNMP Laboratories (formerly 'pysnmp'),15
-AWIND Inc,14
 OneAccess,14
+AWIND Inc,14
 Zeus Technology Ltd,7
 American Power Conversion Corp.,7
 Realtek Semiconductor corp.,6
 General Instrument,5
-Meinberg,5
 "Casa Systems, Inc.",5
+Meinberg,5
 BinTec Communications GmbH,5
 LANCOM Systems,4
 "Moxa Technologies Co., Ltd.",4
 Siemens AG,4
 Extreme Networks,3
-"Force10 Networks, Inc.",3
-OpenBSD Project,3
-Reserved,3
-"Raritan Computer, Inc.",3
 CANON Inc.,3
+"Raritan Computer, Inc.",3
+OpenBSD Project,3
+"Force10 Networks, Inc.",3
+Reserved,3
 HW group s.r.o,2
-ACCTON Technology,2
-"Ubiquiti Networks, Inc.",2
 Microsoft,2
-"Ruijie Networks Co., Ltd. (formerly 'Start Network Technology Co., Ltd.')",1
-Netscaler,1
-TP-Link Systems Inc.,1
-Colubris Networks Inc.,1
-"ATEN INTERNATIONAL CO., LTD.",1
-Avocent Corporation,1
+"Ubiquiti Networks, Inc.",2
+ACCTON Technology,2
 Epilogue,1
-Vertiv (formerly 'Emerson Computer Power'),1
-VMware Inc.,1
-"ZPE Systems, Inc",1
-KYOCERA Corporation,1
-Opengear Inc.,1
-Acme Packet,1
-3Com,1
-Packeteer Inc.,1
 Hewlett Packard Enterprise,1
+3Com,1
+Colubris Networks Inc.,1
+Vertiv (formerly 'Emerson Computer Power'),1
+KYOCERA Corporation,1
+Acme Packet,1
+Packeteer Inc.,1
+Opengear Inc.,1
+"ZPE Systems, Inc",1
+Avocent Corporation,1
+VMware Inc.,1
+Netscaler,1
+"Ruijie Networks Co., Ltd. (formerly 'Start Network Technology Co., Ltd.')",1
+"ATEN INTERNATIONAL CO., LTD.",1
+TP-Link Systems Inc.,1
