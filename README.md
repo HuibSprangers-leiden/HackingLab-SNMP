@@ -31,9 +31,9 @@ The script operates in different modes via command-line arguments:
     * `<folder_with_parsed_csvs>`: Path to a folder containing parsed CSVs (e.g., `outputs/parsed/`).
     * `<reboot_threshold_seconds>`: An integer, only includes devices with uptime greater than this value in seconds.
 
-4.  **Parse ZMap Results (`zmap_parse`)**: Enriches ZMap scan results with ASN/WHOIS information.
-    * **Usage:** `python3 script.py zmap_parse <timestamp_of_zmap_output>`
-    * `<timestamp_of_zmap_output>`: The timestamp from the ZMap output filename (e.g., `27152542` from `zmap_ipv4_snmpv3_27152542.csv`).
+4.  **Parse AS Results (`parse_asn`)**: Get ASN/WHOIS information for a list of IP's.
+    * **Usage:** `python3 script.py parse_asn <path_to_ip_list_file>`
+    * `<path_to_ip_list_file>`: The filepath to a textfile containing a column of IP addresses to get AS data for.
 
 ## Input Files
 
