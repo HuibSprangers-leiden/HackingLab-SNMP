@@ -142,6 +142,7 @@ def parse_tshark_from_file(file_path, save_to_file):
         df_data['Enterprise code'] = pd.to_numeric(df_data['Enterprise code'], errors='coerce')
         df_merged = pd.merge(df_data, df_iana, on='Enterprise code', how='left')
 
+
         if save_to_file:
             # extract the ip file name
             ip_file_name_pattern = r'(?<=tshark_)(.*?)(?=_output)'
@@ -334,6 +335,10 @@ def enterprise_count(folder_name, reboot_threshold):
 
             # if no vendor, we categorise as 'unknown'
             df_merged['Vendor_x'] = df_merged['Vendor_x'].fillna('unknown')
+            
+            # Set vendor to 'Arista networks' if engineID starts with f5717f
+            # https://avd.sh/en/v3.8.6/roles/eos_designs/doc/management-settings.html
+            df_merged.loc[(df_merged['Vendor_x'] == 'unknown') & (df_merged['EngineID'].str.startswith('f5717f', na=False)), 'Vendor_x'] = 'Arista networks'
 
             df_merged['Scan Date'] = scan_date
             df_merged['Reboot Date'] = df_merged['Engine Time'].apply(lambda x: engine_time_to_date(int(x), datetime.datetime.strptime(scan_date, '%m_%d_%H_%M_%S')))
