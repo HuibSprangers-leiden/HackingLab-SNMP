@@ -26,13 +26,20 @@ def fetch_CVEs_with_split(vendor, engine_time, split_size=5_000_000, end_date: d
     end_time_s = int((datetime.now() - end_date).total_seconds())
     
     start = engine_time 
+    count = 0
     while start > end_time_s:
+        # Respect 5 requests/30s limit of NIST api
+        if count == 5:
+            time.sleep(26)
+            count = 0
+        
         end = max(start - split_size, end_time_s)
         df = fetch_CVEs(vendor, start_time_s=start, end_time_s=end)
+        print("fetch")
         if df is not None:
             results.append(df)
         start = end  # move further toward present (i.e., decrease "seconds ago")
-        time.sleep(1) # Sleep to avoid too many requests
+        count += 1
 
     return pd.concat(results, ignore_index=True) if results else pd.DataFrame()
 
@@ -67,21 +74,28 @@ def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
                 'Exploitablity_Score': None
             }
             if 'metrics' in cve['cve']:
-                if 'cvssMetricV31' in cve['cve']['metrics']:
-                    cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore']
-                    cve_data['Severity'] = cve['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseSeverity']
-                    cve_data['CVSS_Version'] = '3.1'
-                    cve_data['Exploitablity_Score'] = cve['cve']['metrics']['cvssMetricV31'][0]['exploitabilityScore']
-                elif 'cvssMetricV30' in cve['cve']['metrics']:
-                    cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV30'][0]['cvssData']['baseScore']
-                    cve_data['Severity'] = cve['cve']['metrics']['cvssMetricV30'][0]['cvssData']['baseSeverity']
-                    cve_data['CVSS_Version'] = '3.0'
-                    cve_data['Exploitablity_Score'] = cve['cve']['metrics']['cvssMetricV30'][0]['exploitabilityScore']
-                elif 'cvssMetricV2' in cve['cve']['metrics']:
-                    cve_data['CVSS_Score'] = cve['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore']
-                    cve_data['Severity'] = cve['cve']['metrics']['cvssMetricV2'][0]['cvssData']['severity']
-                    cve_data['CVSS_Version'] = '2.0'
-                    cve_data['Exploitablity_Score'] = cve['cve']['metrics']['cvssMetricV2'][0]['exploitabilityScore']
+                metrics = cve['cve']['metrics']
+                try:
+                    if 'cvssMetricV31' in metrics and metrics['cvssMetricV31']:
+                        cvss = metrics['cvssMetricV31'][0]
+                        cve_data['CVSS_Score'] = cvss.get('cvssData', {}).get('baseScore')
+                        cve_data['Severity'] = cvss.get('cvssData', {}).get('baseSeverity')
+                        cve_data['CVSS_Version'] = '3.1'
+                        cve_data['Exploitablity_Score'] = cvss.get('exploitabilityScore')
+                    elif 'cvssMetricV30' in metrics and metrics['cvssMetricV30']:
+                        cvss = metrics['cvssMetricV30'][0]
+                        cve_data['CVSS_Score'] = cvss.get('cvssData', {}).get('baseScore')
+                        cve_data['Severity'] = cvss.get('cvssData', {}).get('baseSeverity')
+                        cve_data['CVSS_Version'] = '3.0'
+                        cve_data['Exploitablity_Score'] = cvss.get('exploitabilityScore')
+                    elif 'cvssMetricV2' in metrics and metrics['cvssMetricV2']:
+                        cvss = metrics['cvssMetricV2'][0]
+                        cve_data['CVSS_Score'] = cvss.get('cvssData', {}).get('baseScore')
+                        cve_data['Severity'] = cvss.get('cvssData', {}).get('severity')
+                        cve_data['CVSS_Version'] = '2.0'
+                        cve_data['Exploitablity_Score'] = cvss.get('exploitabilityScore')
+                except (KeyError, IndexError, TypeError) as e:
+                    print(f"Error extracting CVSS data for CVE {cve_data['CVE_ID']}: {e}")
             data.append(cve_data)
     else:
         print(f"Error: {res.status_code}")

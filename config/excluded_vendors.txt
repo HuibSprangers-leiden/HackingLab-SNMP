@@ -2,3 +2,5 @@ ciscoSystems
 net-snmp
 Juniper Networks, Inc.
 HUAWEI Technology Co.,Ltd
+Brocade Communications Systems, Inc.
+Ambit Microsystems Corporation
