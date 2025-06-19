@@ -1,3 +1,8 @@
+"""
+Enriches parsed SNMP data with vendor names using IANA enterprise number mappings,
+and outputs both the mapped records and a vendor count summary.
+"""
+
 import os
 import pandas as pd
 

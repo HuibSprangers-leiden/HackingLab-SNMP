@@ -1,3 +1,7 @@
+"""
+Counts the total number of IP addresses in a list of CIDR ranges.
+"""
+
 import sys
 
 def main():

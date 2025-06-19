@@ -1,3 +1,8 @@
+"""
+SNMP scanning pipeline using ZMap and TShark. Supports packet capture, parsing,
+enrichment, vendor analysis, and ASN resolution.
+"""
+
 import csv
 import datetime
 import os
@@ -23,11 +28,20 @@ IANA_FILE = 'config/enterprise-numbers.txt'
 EXCLUDED_VENDORS = 'config/excluded_vendors.txt'
 
 def get_ip_address():
+    """Returns the local IP address."""
+
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(('8.8.8.8', 80))
     return s.getsockname()[0]
 
 def tshark_sniff(ip_list_path):
+    """
+    Captures SNMPv3 packets using TShark and saves them to a CSV file.
+
+    Runs until the global flag ZMAP_END is set. Filters out packets from the local IP.
+    Output is saved with a timestamp in the TSHARK_FOLDER.
+    """
+    
     global ZMAP_END
 
     ip_file_name = get_file_name(ip_list_path)
@@ -80,6 +94,8 @@ def tshark_sniff(ip_list_path):
         print(traceback.format_exc())
 
 def get_enterprise_codes_df():
+    """Parses the IANA enterprise-numbers file and returns a DataFrame of Enterprise Codes and Vendors."""
+
     with open(IANA_FILE, 'r', encoding='utf-8') as file:
         lines = [line.rstrip('\n') for line in file if line.strip()]
 
@@ -107,6 +123,8 @@ def get_enterprise_codes_df():
     return df_iana
 
 def parse_tshark_from_file(file_path, save_to_file):
+    """Parses a TShark CSV file, enriches it with the vendor info, and optionally saves the result."""
+
     try:
         with open(file_path, 'r') as f:
             reader = csv.reader(f, delimiter=';')
@@ -174,6 +192,8 @@ def parse_tshark_from_file(file_path, save_to_file):
 
     
 def extract_iana_and_mac_from_id(engine_id_str: str):
+    """Extracts the IANA Enterprise code and optional MAC address from an SNMP engine ID."""
+
     try:
         engine_id = bytes.fromhex(engine_id_str)
     except Exception as e:
@@ -206,6 +226,9 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
     
 
 def zmap_scan(ip_list_path):
+    """Executes a ZMap scan on the provided list of IPs. Saves the raw CSV results."""
+
+    global ZMAP_END
 
     ip_file_name = get_file_name(ip_list_path)
 
@@ -225,6 +248,8 @@ def zmap_scan(ip_list_path):
         ZMAP_END = True
 
 def parse_zmap_results(input_file):
+    """Enriches ZMap output with ASN, country, and CIDR information using IPWhois."""
+
     df = pd.read_csv(input_file)
 
     asn_numbers = []
@@ -236,7 +261,7 @@ def parse_zmap_results(input_file):
 
     for _, row in df.iterrows():
         try:
-            obj = IPWhois(row['IP'])  # replace 'IP' with the actual column name of IP addresses in your CSV
+            obj = IPWhois(row['IP'])
             res = obj.lookup_rdap()
 
             asn_num = res.get('asn')
@@ -272,6 +297,8 @@ def parse_zmap_results(input_file):
     print(asns)     # Shows AS numbers and their count
 
 def enterprise_count(folder_name, reboot_threshold):
+    """Counts the parsed SNMPv3 data by vendor and filters by reboot threshold."""
+
     with open(IANA_FILE, 'r', encoding='utf-8') as file:
         lines = [line.rstrip('\n') for line in file if line.strip()]
 
@@ -298,7 +325,6 @@ def enterprise_count(folder_name, reboot_threshold):
     df_iana = pd.DataFrame(iana_data)
     df_iana['Enterprise Code'] = df_iana['Enterprise Code'].astype(str)
 
-    # Create an empty DataFrame to store the combined data
     df_combined = pd.DataFrame(columns=['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor'])
 
     if not os.path.exists(RESULTS_OUTPUT_FOLDER):
@@ -316,7 +342,6 @@ def enterprise_count(folder_name, reboot_threshold):
             if timestamp_match:
                 scan_date = timestamp_match.group(1)
             else:
-                # raise error as this should match
                 raise ValueError(f'Timestamp not found in file name: {filename}. The file name should contain an time stamp.')
 
             df_input = pd.read_csv(input_file)
@@ -347,7 +372,7 @@ def enterprise_count(folder_name, reboot_threshold):
                 reboot_date = row['Reboot Date']
                 scan_date = row['Scan Date']
 
-                # Ccheck if ip already exists
+                # check if ip already exists
                 if ip in df_combined['IP'].values:
                     # find this row, then check to delete and just add the new row
                     existing_row = df_combined[df_combined['IP'] == ip]
@@ -406,6 +431,8 @@ def enterprise_count(folder_name, reboot_threshold):
     print(f'Filtered vendor counts written to:   {vendor_count_file_timed}')
 
 def engine_time_to_date(engine_time, scan_date):
+    """Converts an SNMP engine time (in seconds) to an reboot date."""
+
     if isinstance(scan_date, str):
         scan_date = datetime.datetime.strptime(scan_date, '%m_%d_%H_%M_%S')
 
@@ -414,6 +441,8 @@ def engine_time_to_date(engine_time, scan_date):
     return reboot_time.strftime('%m_%d_%Y_%H_%M_%S')
 
 def date_to_engine_time(reboot_date_str, scan_date):
+    """Converts a reboot date back into engine time in seconds."""
+
     reboot_date = datetime.datetime.strptime(reboot_date_str, '%m_%d_%Y_%H_%M_%S')
     time_difference = scan_date - reboot_date
 
@@ -421,15 +450,19 @@ def date_to_engine_time(reboot_date_str, scan_date):
     return engine_time
 
 def get_file_name(file_path):
+    """Extracts the first alphanumeric chunk before the file extension as the file name."""
+
     pattern = r'[\w-]+?(?=\.)'
     return re.search(pattern, file_path).group()
 
 def commandline_help():
+    """Prints usage help for this script."""
+    
     print('Script usage:\n'
-            '  python3 script.py scan <path_to_ip_list>\n'
-            '  python3 script.py parse <file_name>\n'
-            '  python3 script.py enterprise_count <folder_name> reboot_threshold\n'
-            '  python3 script.py parse_asn <path_to_ip_list>\n')
+            '  python3 script.py scan <path_to_ip_list>                             # Start and save a ZMap and TShark scan.\n'
+            '  python3 script.py parse <file_name>                                  # Parse a TShark CSV file and enrich it.\n'
+            '  python3 script.py enterprise_count <folder_name> reboot_threshold    # Count vendors from parsed results with reboot threshold.\n'
+            '  python3 script.py parse_asn <path_to_ip_list>                        # Enrich ZMap results with ASN info.\n')
     sys.exit(1)
 
 def main():
@@ -470,6 +503,9 @@ def main():
             commandline_help()
         input_file_path = sys.argv[2]
         parse_zmap_results(input_file_path)
+
+    elif mode == '--help':
+        commandline_help()
 
     else:
         print('Mode not found.')
