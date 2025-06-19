@@ -19,14 +19,13 @@ ZMAP_FOLDER = './outputs/zmap/'
 TSHARK_FOLDER = './outputs/tshark/'
 PARSED_OUTPUTS_FOLDER = './outputs/parsed/'
 RESULTS_OUTPUT_FOLDER = './outputs/results/'
-IANA_FILE = "config/enterprise-numbers.txt"
-EXCLUDED_VENDORS = "config/excluded_vendors.txt"
+IANA_FILE = 'config/enterprise-numbers.txt'
+EXCLUDED_VENDORS = 'config/excluded_vendors.txt'
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
+    s.connect(('8.8.8.8', 80))
     return s.getsockname()[0]
-
 
 def tshark_sniff(ip_list_path):
     global ZMAP_END
@@ -56,28 +55,28 @@ def tshark_sniff(ip_list_path):
             preexec_fn=os.setsid
         )
         lines = []
-        print("TShark started...")
+        print('TShark started...')
         while True:
             if ZMAP_END:
-                print(" Stopping TShark...")
+                print(' Stopping TShark...')
                 os.killpg(os.getpgid(process.pid), signal.SIGINT)
                 lines = process.stdout.readlines()
                 break
 
-        curTime = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-        timeStamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}",curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
+        curTime = datetime.datetime.strptime(str(datetime.datetime.now()), '%Y-%m-%d %H:%M:%S.%f')
+        timeStamp = str.format('{:02d}_{:02d}_{:02d}_{:02d}_{:02d}',curTime.month, curTime.day, curTime.hour, curTime.minute, curTime.second)
 
         # save to csv, so we can parse afterwards in case of unexpected errors
-        with open(f"{TSHARK_FOLDER}tshark_{ip_file_name}_output_{timeStamp}.csv", "w") as csvfile:
+        with open(f'{TSHARK_FOLDER}tshark_{ip_file_name}_output_{timeStamp}.csv', 'w') as csvfile:
             writer = csv.writer(csvfile, delimiter=';')
             for line in lines:
                 row = line.strip().split(';')
                 writer.writerow(row)
 
-        print("TShark capture ended. Saved to "  + f"tshark_{ip_file_name}_output_{timeStamp}.csv. This can now be parsed.")
+        print(f'TShark capture ended. Saved to tshark_{ip_file_name}_output_{timeStamp}.csv. This can now be parsed.')
 
     except Exception as e:
-        print(f"Error during TShark sniffing: {e}")
+        print(f'Error during TShark sniffing: {e}')
         print(traceback.format_exc())
 
 def get_enterprise_codes_df():
@@ -109,12 +108,12 @@ def get_enterprise_codes_df():
 
 def parse_tshark_from_file(file_path, save_to_file):
     try:
-        with open(file_path, "r") as f:
+        with open(file_path, 'r') as f:
             reader = csv.reader(f, delimiter=';')
             lines = list(reader)
             start = 0
             for i, line in enumerate(lines):
-                if "ip.src_host" in line:
+                if 'ip.src_host' in line:
                     start = i
                     break
         
@@ -122,8 +121,8 @@ def parse_tshark_from_file(file_path, save_to_file):
 
         # Remove tshark logs
         header = lines[0]
-        header.append("Enterprise code")
-        header.append("Mac")
+        header.append('Enterprise code')
+        header.append('Mac')
 
         lines_with_mac = []
         
@@ -134,7 +133,7 @@ def parse_tshark_from_file(file_path, save_to_file):
                 iana, mac = extract_iana_and_mac_from_id(id)
                 lines_with_mac.append([ip, id, boots, time, iana, mac])
             else:
-                print("Invalid row:", row)
+                print(f'Invalid row:, {row}')
 
         # Map enterprise code to vendor 
         df_iana = get_enterprise_codes_df()
@@ -152,7 +151,7 @@ def parse_tshark_from_file(file_path, save_to_file):
                 ip_file_name = ip_file_name_match.group()
             else:
                 # raise error as this should match
-                raise ValueError(f"Ip file not found in file name: {file_path}. The file name should contain an time stamp.")
+                raise ValueError(f'Ip file not found in file name: {file_path}. The file name should contain an time stamp.')
 
                 
             # Check if file has timestamp and reuse it for consistency
@@ -161,16 +160,16 @@ def parse_tshark_from_file(file_path, save_to_file):
                 timestamp = timestamp_match.group(1)
             else:
                 # raise error as this should match
-                raise ValueError(f"Timestamp not found in file name: {file_path}. The file name should contain an time stamp.")
+                raise ValueError(f'Timestamp not found in file name: {file_path}. The file name should contain an time stamp.')
 
             # Save file
             df_merged.columns = ['IP','EngineID','Engine Boots', 'Engine Time', 'Enterprise Code', 'MAC', 'Vendor']
             output_file = f'{PARSED_OUTPUTS_FOLDER}parsed_{ip_file_name}_output_{timestamp}.csv'
             df_merged.to_csv(output_file, index=False)
-            print(f"Parsed succesfully to: {PARSED_OUTPUTS_FOLDER}parsed_{ip_file_name}_output_{timestamp}.csv")
+            print(f'Parsed succesfully to: {PARSED_OUTPUTS_FOLDER}parsed_{ip_file_name}_output_{timestamp}.csv')
 
     except Exception as e:
-        print(f"Failed to parse CSV {file_path}: {e}")
+        print(f'Failed to parse CSV {file_path}: {e}')
         print(traceback.format_exc())
 
     
@@ -178,12 +177,12 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
     try:
         engine_id = bytes.fromhex(engine_id_str)
     except Exception as e:
-        return ("invalid", "invalid")
+        return ('invalid', 'invalid')
     if len(engine_id) <= 5:
-        return ("invalid", "invalid")
+        return ('invalid', 'invalid')
     
-    enterprise_code = "not_set"
-    mac = "not_set"
+    enterprise_code = 'not_set'
+    mac = 'not_set'
 
     # Engine ID parsing method is based on: https://www.rfc-editor.org/rfc/pdfrfc/rfc3411.txt.pdf page 42
 
@@ -198,7 +197,7 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
         if engine_id[4] == 0x03:
             mac = engine_id[5:].hex() # TODO: This might contain padding, find a way to remove it
         else:
-            mac = "No Mac indication (0x03)"
+            mac = 'No Mac indication (0x03)'
     else:
         enterprise_bytes = engine_id[:4]
         enterprise_code = str(int.from_bytes(enterprise_bytes, byteorder='big'))
@@ -207,21 +206,20 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
     
 
 def zmap_scan(ip_list_path):
-    global ZMAP_END
 
     ip_file_name = get_file_name(ip_list_path)
 
-    cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+    cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), '%Y-%m-%d %H:%M:%S.%f')
     timestamp = str(cur_time.day)+str(cur_time.month)+str(cur_time.hour)+str(cur_time.minute)
-    output_filename = f"zmap_{ip_file_name}_snmpv3_{timestamp}.csv" 
+    output_filename = f'zmap_{ip_file_name}_snmpv3_{timestamp}.csv' 
 
     command = f"sudo zmap -M udp -p 161 -B 10M --probe-args=file:./config/snmp3_161.pkt -O csv -f \"*\" -o {ZMAP_FOLDER}{output_filename} -c 10 -w {ip_list_path} --output-filter=\"success=1 && repeat=0\""
     try:
-        print("ZMap scan started...")
+        print('ZMap scan started...')
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        print("ZMap scan completed.")
+        print('ZMap scan completed.')
     except subprocess.CalledProcessError as e:
-        print("Error during ZMap scan:")
+        print('Error during ZMap scan:')
         print(e.stderr)
     finally:
         ZMAP_END = True
@@ -266,8 +264,8 @@ def parse_zmap_results(input_file):
     })
 
     # Save to a different CSV file using the current timestamp
-    cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-    timestamp = str.format("{:02d}_{:02d}_{:02d}_{:02d}_{:02d}", cur_time.month, cur_time.day, cur_time.hour,
+    cur_time = datetime.datetime.strptime(str(datetime.datetime.now()), '%Y-%m-%d %H:%M:%S.%f')
+    timestamp = str.format('{:02d}_{:02d}_{:02d}_{:02d}_{:02d}', cur_time.month, cur_time.day, cur_time.hour,
                            cur_time.minute, cur_time.second)
 
     enriched_df.to_csv(f'{ZMAP_FOLDER}zmap_enrichment_only_{timestamp}.csv', index=False)
@@ -310,7 +308,7 @@ def enterprise_count(folder_name, reboot_threshold):
 
     # loop over all the csv files
     for filename in os.listdir(folder_name):
-        if filename.endswith(".csv"):
+        if filename.endswith('.csv'):
             input_file = os.path.join(folder_name, filename)
 
             # get scan date from this file name
@@ -319,7 +317,7 @@ def enterprise_count(folder_name, reboot_threshold):
                 scan_date = timestamp_match.group(1)
             else:
                 # raise error as this should match
-                raise ValueError(f"Timestamp not found in file name: {filename}. The file name should contain an time stamp.")
+                raise ValueError(f'Timestamp not found in file name: {filename}. The file name should contain an time stamp.')
 
             df_input = pd.read_csv(input_file)
             df_input.columns = df_input.columns.str.strip()
@@ -359,53 +357,53 @@ def enterprise_count(folder_name, reboot_threshold):
                     if datetime.datetime.strptime(reboot_date, '%m_%d_%Y_%H_%M_%S') > datetime.datetime.strptime(existing_reboot_date, '%m_%d_%Y_%H_%M_%S') + datetime.timedelta(seconds=86400):
                         row_index = df_combined[df_combined['IP'] == ip].index
                         df_combined = df_combined.drop(row_index)
-                        print("MORE UP TO DATE, old: " + existing_reboot_date + ", new: " + reboot_date)
+                        print(f'MORE UP TO DATE, old: {existing_reboot_date}, new: {reboot_date}')
 
             df_output = df_merged[['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor_x', 'Scan Date', 'Reboot Date']]
             df_output.columns = ['IP', 'Enterprise Code', 'MAC', 'Engine Time', 'Engine Boots', 'Vendor', 'Scan Date', 'Reboot Date']
             
             df_combined = pd.concat([df_combined, df_output], ignore_index=True)
 
-            print(f"Processed {filename}")
+            print(f'Processed {filename}')
 
     # output the files to the 'results' folder
-    combined_output_file = os.path.join(RESULTS_OUTPUT_FOLDER, "combined_enterprise_output.csv")
-    combined_output_file_timed = os.path.join(RESULTS_OUTPUT_FOLDER, "combined_enterprise_output_timed.csv")
-    vendor_count_file = os.path.join(RESULTS_OUTPUT_FOLDER, "vendor_counts_combined.csv")
-    vendor_count_file_timed = os.path.join(RESULTS_OUTPUT_FOLDER, "vendor_counts_combined_timed.csv")
+    combined_output_file = os.path.join(RESULTS_OUTPUT_FOLDER, 'combined_enterprise_output.csv')
+    combined_output_file_timed = os.path.join(RESULTS_OUTPUT_FOLDER, 'combined_enterprise_output_timed.csv')
+    vendor_count_file = os.path.join(RESULTS_OUTPUT_FOLDER, 'vendor_counts_combined.csv')
+    vendor_count_file_timed = os.path.join(RESULTS_OUTPUT_FOLDER, 'vendor_counts_combined_timed.csv')
 
     # combine csv, filter out duplicates
     size_before = df_combined.shape[0]
     df_combined.drop_duplicates(subset=['IP'], inplace=True)
-    print("\nDropped " + str(size_before - df_combined.shape[0]) + " duplicates.")
+    print(f'\nDropped {str(size_before - df_combined.shape[0])} duplicates.')
 
     # filter out excluded vendors
     size_before = df_combined.shape[0]
-    df_combined = df_combined[~df_combined["Vendor"].isin(excluded_vendors)]
-    print("Dropped " + str(size_before - df_combined.shape[0]) + " by vendor exclusion.\n" + str(df_combined.shape[0]) + " entries left.")
+    df_combined = df_combined[~df_combined['Vendor'].isin(excluded_vendors)]
+    print(f'Dropped {str(size_before - df_combined.shape[0])} by vendor exclusion.\n {str(df_combined.shape[0])} entries left.')
 
     df_combined.to_csv(combined_output_file, index=False)
-    print(f"Combined output written to:          {combined_output_file}")
+    print(f'Combined output written to:          {combined_output_file}')
 
     # count vendors
     vendor_counts = df_combined['Vendor'].value_counts().reset_index()
     vendor_counts.columns = ['Vendor', 'Count']
     vendor_counts.to_csv(vendor_count_file, index=False)
-    print(f"Filtered vendor counts written to:   {vendor_count_file}")
+    print(f'Filtered vendor counts written to:   {vendor_count_file}')
 
     # filter on engine time in seconds
     size_before = df_combined.shape[0]
     df_combined['Engine Time'] = pd.to_numeric(df_combined['Engine Time'])
     df_combined = df_combined[df_combined['Engine Time'] >= reboot_threshold]
-    print("\nDropped " + str(size_before - df_combined.shape[0]) + " entries based on engine time of " + str(size_before) + " total. \n" + str(df_combined.shape[0]) + " entries left.")
+    print(f'\nDropped {str(size_before - df_combined.shape[0])} entries based on engine time of {str(size_before)} total. \n {str(df_combined.shape[0])} entries left.')
     df_combined.to_csv(combined_output_file_timed, index=False)
-    print(f"Combined output written to:          {combined_output_file_timed}")
+    print(f'Combined output written to:          {combined_output_file_timed}')
 
     # count vendors after this engine filter
     vendor_counts1 = df_combined['Vendor'].value_counts().reset_index()
     vendor_counts1.columns = ['Vendor', 'Count']
     vendor_counts1.to_csv(vendor_count_file_timed, index=False)
-    print(f"Filtered vendor counts written to:   {vendor_count_file_timed}")
+    print(f'Filtered vendor counts written to:   {vendor_count_file_timed}')
 
 def engine_time_to_date(engine_time, scan_date):
     if isinstance(scan_date, str):
@@ -427,17 +425,17 @@ def get_file_name(file_path):
     return re.search(pattern, file_path).group()
 
 def commandline_help():
-    print("Script usage:\n"
-            "  python3 script.py scan <path_to_ip_list>\n"
-            "  python3 script.py parse <file_name>\n"
-            "  python3 script.py enterprise_count <folder_name> reboot_threshold\n"
-            "  python3 script.py parse_asn <path_to_ip_list>\n")
+    print('Script usage:\n'
+            '  python3 script.py scan <path_to_ip_list>\n'
+            '  python3 script.py parse <file_name>\n'
+            '  python3 script.py enterprise_count <folder_name> reboot_threshold\n'
+            '  python3 script.py parse_asn <path_to_ip_list>\n')
     sys.exit(1)
 
 def main():
     mode = sys.argv[1]
 
-    if mode == "scan":
+    if mode == 'scan':
         if len(sys.argv) != 3:
             commandline_help()
         ip_list_path = sys.argv[2]
@@ -452,14 +450,14 @@ def main():
         zmap_thread.join()
         sniff_thread.join()
 
-    elif mode == "parse":
+    elif mode == 'parse':
         if len(sys.argv) != 3:
             commandline_help()
         file_path = sys.argv[2]
 
         parse_tshark_from_file(file_path, True)
 
-    elif mode == "enterprise_count":
+    elif mode == 'enterprise_count':
         if len(sys.argv) != 4:
             commandline_help()
         folder_name      = sys.argv[2]
@@ -467,15 +465,15 @@ def main():
 
         enterprise_count(folder_name, reboot_threshold)
 
-    elif mode == "parse_asn":
+    elif mode == 'parse_asn':
         if len(sys.argv) != 3:
             commandline_help()
         input_file_path = sys.argv[2]
         parse_zmap_results(input_file_path)
 
     else:
-        print("Mode not found.")
+        print('Mode not found.')
         commandline_help()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
