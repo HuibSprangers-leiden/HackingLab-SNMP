@@ -2,11 +2,10 @@ from datetime import datetime, timedelta
 import requests
 import sys
 import pandas as pd
-import csv
 import time
 
 def translate_vendor(input_vendor: str):
-    with open("translation.csv", 'r') as translator:
+    with open('config/translation.csv', 'r') as translator:
         df = pd.read_csv(translator)
         for i, vendor in enumerate(df['Vendor']):
             if vendor == input_vendor:
@@ -17,6 +16,7 @@ def translate_vendor(input_vendor: str):
 def fetch_CVEs_with_split(vendor, engine_time, split_size=5_000_000, end_date: datetime=None):
     results = []
     if vendor == 'no_match':
+        print(f'Did not fetch any data for {vendor}')
         return pd.DataFrame()
 
     if end_date is None:
@@ -24,6 +24,8 @@ def fetch_CVEs_with_split(vendor, engine_time, split_size=5_000_000, end_date: d
 
     # How many seconds ago is end_date from now?
     end_time_s = int((datetime.now() - end_date).total_seconds())
+    print(f'Fetching CVEs for {vendor}, from {engine_time}s ago until {end_date}')
+    print('This might take a while...')
     
     start = engine_time 
     count = 0
@@ -35,7 +37,6 @@ def fetch_CVEs_with_split(vendor, engine_time, split_size=5_000_000, end_date: d
         
         end = max(start - split_size, end_time_s)
         df = fetch_CVEs(vendor, start_time_s=start, end_time_s=end)
-        print("fetch")
         if df is not None:
             results.append(df)
         start = end  # move further toward present (i.e., decrease "seconds ago")
@@ -46,13 +47,13 @@ def fetch_CVEs_with_split(vendor, engine_time, split_size=5_000_000, end_date: d
 
 def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
     # Use NVD API to fetch CVEs
-    base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    base_url = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
 
-    start_date = (datetime.now() - timedelta(seconds=start_time_s)).strftime("%Y-%m-%dT%H:%M:%S")
+    start_date = (datetime.now() - timedelta(seconds=start_time_s)).strftime('%Y-%m-%dT%H:%M:%S')
     if not end_time_s:
-        end_date = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        end_date = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
     else:
-        end_date = (datetime.now() - timedelta(seconds=end_time_s)).strftime("%Y-%m-%dT%H:%M:%S")
+        end_date = (datetime.now() - timedelta(seconds=end_time_s)).strftime('%Y-%m-%dT%H:%M:%S')
 
     params = {
         'keywordSearch': vendor,
@@ -98,39 +99,40 @@ def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
                     print(f"Error extracting CVSS data for CVE {cve_data['CVE_ID']}: {e}")
             data.append(cve_data)
     else:
-        print(f"Error: {res.status_code}")
+        print(f'Error: {res.status_code}')
     
-    # Create DataFrame
     df = pd.DataFrame(data)
-    #print("\nDataFrame:")
-    #print(df)
+ 
     return df
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     if len(sys.argv) < 3 or len(sys.argv) > 4:
-        print("Usage: python cve_matching.py <engine time> <option> <vendor name> ")
-        print("option types:  \n",\
-            "<none> - take vendor name as is\n",\
+        print('Usage: python cve_matching.py <engine time> <option> <vendor name> ')
+        print('option types:  \n',\
+            '<none> - take vendor name as is\n',\
             "'-t' - translate vendor name via translation.csv file\n"\
             "'-a' - run for all vendors in translation file")        
         sys.exit(1)
     
     engine_time = int(float(sys.argv[1]))
+
     #Runs for vendor name translated to searchable name in translation file
     if sys.argv[2] == '-t' and len(sys.argv) == 4:
-        with open("translation.csv", 'r') as translator:
+        with open('translation.csv', 'r') as translator:
             vendor_name = sys.argv[3]
             df = pd.read_csv(translator)
             for i, vendor in enumerate(df['Vendor']):
                 if vendor == vendor_name:
                      fetch_CVEs(df['translation'][i], engine_time)
                      break
+
     #Runs for all vendors present in translation file
     elif sys.argv[2] == '-a' and len(sys.argv) == 3:
-        with open("translation.csv", 'r') as translator:
+        with open('translation.csv', 'r') as translator:
             df = pd.read_csv(translator)
             for row in df['translation']:
                         fetch_CVEs(row, engine_time)
+
     #Takes vendor name and runs as is
     elif len(sys.argv) == 3:
         vendor = sys.argv[2]
