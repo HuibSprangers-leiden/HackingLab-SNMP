@@ -40,6 +40,9 @@ def tshark_sniff(ip_list_path):
 
     Runs until the global flag ZMAP_END is set. Filters out packets from the local IP.
     Output is saved with a timestamp in the TSHARK_FOLDER.
+
+    Args:
+        ip_list_path (str): Path to input list of IP addresses.
     """
     
     global ZMAP_END
@@ -123,7 +126,14 @@ def get_enterprise_codes_df():
     return df_iana
 
 def parse_tshark_from_file(file_path, save_to_file):
-    """Parses a TShark CSV file, enriches it with the vendor info, and optionally saves the result."""
+    """
+    Parses a TShark CSV file to extract SNMP engine IDs
+    Enriches it with the vendor info, and optionally saves the result.
+
+    Args:
+        file_path (str): Path to the TShark output CSV.
+        save_to_file (bool): Whether to save the enriched output.
+    """
 
     try:
         with open(file_path, 'r') as f:
@@ -192,7 +202,15 @@ def parse_tshark_from_file(file_path, save_to_file):
 
     
 def extract_iana_and_mac_from_id(engine_id_str: str):
-    """Extracts the IANA Enterprise code and optional MAC address from an SNMP engine ID."""
+    """
+    Extracts the IANA Enterprise code and optional MAC address from an SNMP engine ID.
+    
+    Args:
+        engine_id_str (str): Hex-encoded SNMP Engine ID
+
+    Returns:
+        Tuple[str, str]: Enterprise code and MAC address (if present)
+    """
 
     try:
         engine_id = bytes.fromhex(engine_id_str)
@@ -226,7 +244,13 @@ def extract_iana_and_mac_from_id(engine_id_str: str):
     
 
 def zmap_scan(ip_list_path):
-    """Executes a ZMap scan on the provided list of IPs. Saves the raw CSV results."""
+    """
+    Executes a ZMap scan on the provided list of IPs.
+    Results are saved as raw CSV in the ZMAP_FOLDER.
+    
+     Args:
+        ip_list_path (str): Path to input list of IP addresses.
+    """
 
     global ZMAP_END
 
@@ -248,7 +272,12 @@ def zmap_scan(ip_list_path):
         ZMAP_END = True
 
 def parse_zmap_results(input_file):
-    """Enriches ZMap output with ASN, country, and CIDR information using IPWhois."""
+    """
+    Enriches ZMap output with ASN, country, and CIDR information using IPWhois.
+    
+    Args:
+        input_file (str): Path to ZMap CSV output to enrich
+    """
 
     df = pd.read_csv(input_file)
 
@@ -297,7 +326,14 @@ def parse_zmap_results(input_file):
     print(asns)     # Shows AS numbers and their count
 
 def enterprise_count(folder_name, reboot_threshold):
-    """Counts the parsed SNMPv3 data by vendor and filters by reboot threshold."""
+    """
+    Aggregates SNMPv3 parsed data by vendor, filters based on engine time threshold.
+    Deduplicates by IP, excludes certain vendors, and saves CSVs in RESULTS_OUTPUT_FOLDER.
+    
+    Args:
+        folder_name (str): Directory containing parsed SNMP CSVs
+        reboot_threshold (int): Minimum engine time in seconds to include entry
+    """
 
     with open(IANA_FILE, 'r', encoding='utf-8') as file:
         lines = [line.rstrip('\n') for line in file if line.strip()]
