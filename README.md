@@ -16,7 +16,7 @@ This script automates scanning, sniffing, parsing, and analyzing SNMPv3 data.
 * `graphs/`: Useful graphs from the analysis.
 * `ip_lists/`: Lists with IP addresses in the Netherlands, split into multiple files for parallel scanning.
 * `script.py`: Main script used for scanning, parsing scan results and IP to vendor mapping.
-* `cve_matching.py`: Util script used for fetching CVEs from the NIST CVE Api.
+* `cve_matching.py`: Util script used for fetching CVEs from the NIST CVE API.
 * `analyse_asn.py`: Script to compute AS pie chart and stats
 * `ip_counting.py`: Script to count the total number of IPs scanned.
 
@@ -74,7 +74,7 @@ The script operates in different modes via command-line arguments:
 * `config/snmp3_161.pkt` (ZMap probe payload for SNMPv3)
 * `config/enterprise-numbers.txt`: Mapping of Enterprise Numbers to Vendor names.
 * `config/ip_to_as_06_10.csv.txt`: Mapping of IPs to AS numbers for all IPs scanned until 06/10/2025
-* `config/excluded_vendors.txt`: Vendors excluded during Enterprise Count analysis and the analaysis notebook.
+* `config/excluded_vendors.txt`: Vendors excluded during Enterprise Count analysis and the analysis notebook.
 * `config/all_vendors_cves.csv`: All fetched CVEs for identified vendors, used in analysis.py to cache fetched CVEs.
 * `config/ASN_count.txt.txt`: Number of IPs per AS, top 10 ASes were also mapped to their network type manually.
 
@@ -87,7 +87,7 @@ Generated in the `outputs/` directory and its subfolders (`outputs/zmap/`, `outp
 
 * Raw TShark capture CSVs (`outputs/tshark/`)
 * Raw ZMap scan result CSVs (`outputs/zmap/`)
-* Enriched ZMap CSVs (`outputs/zmap/`)
+* Enriched ZMap with AS results CSVs (`outputs/zmap/`)
 * Parsed TShark output CSVs (`outputs/parsed/`)
 * Consolidated and filtered enterprise reports (`outputs/results/`)
 * Vendor count reports (`outputs/results/`)
