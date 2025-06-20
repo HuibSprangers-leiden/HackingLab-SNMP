@@ -5,6 +5,14 @@ import pandas as pd
 import time
 
 def translate_vendor(input_vendor: str):
+    """ Translates vendor name to a 'searchable' name for the NIST API' all supported vendors are in config/translation.csv
+
+    Args:
+        input_vendor (str): The vendor string as given by the parsing script
+
+    Returns:
+        str: The translated vendor name
+    """
     with open('config/translation.csv', 'r') as translator:
         df = pd.read_csv(translator)
         for i, vendor in enumerate(df['Vendor']):
@@ -14,6 +22,18 @@ def translate_vendor(input_vendor: str):
 
 
 def fetch_CVEs_with_split(vendor, engine_time, split_size=5_000_000, end_date: datetime=None):
+    """ Fetches all CVEs of a given vendor for all dates starting from 'engine_time' seconds ago. 
+    If an end_date is given it marks the end of the search window.
+
+    Args:
+        vendor (str): the (translated) vendor name
+        engine_time (int): Oldest engine time in seconds
+        split_size (int, optional): Controls the max time window in seconds to split the request. Defaults to 5_000_000.
+        end_date (datetime, optional): The end date of the time window. Defaults to None.
+
+    Returns:
+        pd.Dataframe: A dataframe with all the CVE data for the given vendor
+    """
     results = []
     if vendor == 'no_match':
         print(f'Did not fetch any data for {vendor}')
@@ -46,6 +66,16 @@ def fetch_CVEs_with_split(vendor, engine_time, split_size=5_000_000, end_date: d
 
 
 def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
+    """ Fetches all CVEs for a given vendor in a time window between 'start_time_s' seconds ago and 'end_time_s' seconds ago.
+
+    Args:
+        vendor (str): The vendor name
+        start_time_s (int): Time since the start of the search in seconds ago.
+        end_time_s (_type_, optional): Time indicating the end of the search in seconds ago. Defaults to None, and the current time is taken.
+
+    Returns:
+        pd.Dataframe: A dataframe with all the CVE data for the given vendor
+    """
     # Use NVD API to fetch CVEs
     base_url = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
 
@@ -104,6 +134,7 @@ def fetch_CVEs(vendor: str, start_time_s: int, end_time_s = None):
     df = pd.DataFrame(data)
  
     return df
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 3 or len(sys.argv) > 4:
